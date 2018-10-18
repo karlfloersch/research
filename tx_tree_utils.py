@@ -1,4 +1,4 @@
-from ethereum.utils import sha3, bytes_to_int, int_to_bytes
+from ethereum.utils import sha3, bytes_to_int, int_to_bytes, encode_hex
 import json
 import random
 
@@ -38,9 +38,10 @@ def construct_tree(db, nodes):
             remaining_nodes.append(nodes[i])
             break
         new_value = b''.join([nodes[i], nodes[i+1]])
-        print('\nnew_value:', new_value)
         new_sum = int_to_bytes(bytes_to_int(nodes[i+1][32:]) + bytes_to_int(nodes[i][32:])).rjust(8, b"\x00")
         new_hash = b''.join([sha3(new_value), new_sum])
+        print('Left:', encode_hex(nodes[i]), 'parent:', encode_hex(new_hash))
+        print('Right:', encode_hex(nodes[i+1]), 'parent:', encode_hex(new_hash))
         db.put(new_hash, new_value)
         remaining_nodes.append(new_hash)
     return construct_tree(db, remaining_nodes)
@@ -56,20 +57,19 @@ def get_proof_of_index(db, root, coin_id):
     if db.get(root) is None:
         return root
     proof = [root]
-    root_value = db.get(root)
 
     def follow_path(node, total_offset, target):
-        if is_json(node):
-            return node
-        left_sum = bytes_to_int(node[32:40])
-        # Add the left and right nodes to our tree
-        proof.insert(0, node[40:])
-        proof.insert(0, node[0:40])
+        node_value = db.get(node)
+        if is_json(node_value):
+            return node_value
+        left_sum = bytes_to_int(node_value[32:40])
         if left_sum + total_offset > target:
-            return follow_path(db.get(node[0:40]), total_offset, target)
+            proof.insert(0, ('left', node_value[40:]))
+            return follow_path(node_value[0:40], total_offset, target)
         else:
-            return follow_path(db.get(node[40:]), total_offset + left_sum, target)
-    follow_path(root_value, 0, coin_id)
+            proof.insert(0, ('right', node_value[0:40]))
+            return follow_path(node_value[40:], total_offset + left_sum, target)
+    follow_path(root, 0, coin_id)
     return proof
 
 # TODO: Clean this up! Eww!
