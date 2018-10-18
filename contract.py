@@ -67,6 +67,8 @@ class PlasmaContract():
         assert self.exits[exit_index]['start'] <= coin_id and coin_id < self.exits[exit_index]['start'] + self.exits[exit_index]['offset']
         # Check that the transaction hash is in the proof
         assert get_sum_hash_of_tx(tx) in proof
+        # Verify that the owner is not the exit owner (why would you challenge your own coin?)
+        assert tx['contents']['owner'] != self.exits[exit_index]['owner']
         # Check that the transaction is in the specified block
         assert self.verify_merkle_proof(self.blocks[blocknumber_of_spend], proof)
         # Record challenge
