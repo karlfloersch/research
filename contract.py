@@ -57,8 +57,8 @@ class PlasmaContract():
                 new_value = b''.join([h, proof[i][1]])
             else:
                 new_value = b''.join([proof[i][1], h])
-            new_sum = int_to_bytes(bytes_to_int(h[32:]) + bytes_to_int(proof[i][1][32:])).rjust(8, b"\x00")
-            h = b''.join([sha3(new_value), new_sum])
+            new_sum = int_to_bytes(bytes_to_int(h[24:]) + bytes_to_int(proof[i][1][24:])).rjust(8, b"\x00")
+            h = b''.join([sha3(new_value)[:24], new_sum])
         return h == proof[-1]
 
     def challenge_coin(self, exit_index, coin_id, blocknumber_of_spend, tx, proof):

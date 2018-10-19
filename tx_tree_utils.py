@@ -38,8 +38,8 @@ def construct_tree(db, nodes):
             remaining_nodes.append(nodes[i])
             break
         new_value = b''.join([nodes[i], nodes[i+1]])
-        new_sum = int_to_bytes(bytes_to_int(nodes[i+1][32:]) + bytes_to_int(nodes[i][32:])).rjust(8, b"\x00")
-        new_hash = b''.join([sha3(new_value), new_sum])
+        new_sum = int_to_bytes(bytes_to_int(nodes[i+1][24:]) + bytes_to_int(nodes[i][24:])).rjust(8, b"\x00")
+        new_hash = b''.join([sha3(new_value)[0:24], new_sum])
         print('Left:', encode_hex(nodes[i]), 'parent:', encode_hex(new_hash))
         print('Right:', encode_hex(nodes[i+1]), 'parent:', encode_hex(new_hash))
         db.put(new_hash, new_value)
@@ -62,13 +62,13 @@ def get_proof_of_index(db, root, coin_id):
         node_value = db.get(node)
         if is_json(node_value):
             return node_value
-        left_sum = bytes_to_int(node_value[32:40])
+        left_sum = bytes_to_int(node_value[24:32])
         if left_sum + total_offset > target:
-            proof.insert(0, ('left', node_value[40:]))
-            return follow_path(node_value[0:40], total_offset, target)
+            proof.insert(0, ('left', node_value[32:]))
+            return follow_path(node_value[0:32], total_offset, target)
         else:
-            proof.insert(0, ('right', node_value[0:40]))
-            return follow_path(node_value[40:], total_offset + left_sum, target)
+            proof.insert(0, ('right', node_value[0:32]))
+            return follow_path(node_value[32:], total_offset + left_sum, target)
     follow_path(root, 0, coin_id)
     return proof
 
@@ -82,25 +82,25 @@ def get_txs_at_index(db, root, range_start):
         print(node)
         if is_json(node):
             return node
-        left_sum = bytes_to_int(node[32:40])
+        left_sum = bytes_to_int(node[24:32])
         if left_sum + total_offset > target:
-            return follow_path(db.get(node[0:40]), total_offset, target)
+            return follow_path(db.get(node[0:32]), total_offset, target)
         else:
-            return follow_path(db.get(node[40:]), total_offset + left_sum, target)
+            return follow_path(db.get(node[32:]), total_offset + left_sum, target)
 
     return follow_path(root, 0, range_start)
 
 def get_sum_hash_of_tx(tx):
     offset = int_to_bytes(tx['contents']['offset']).rjust(8, b"\x00")
     tx_hash = sha3(json.dumps(tx))
-    return b''.join([tx_hash, offset])
+    return b''.join([tx_hash[:24], offset])
 
 def make_block_from_txs(db, txs):
     merkle_leaves = []
     for t in txs:
         offset = int_to_bytes(t['contents']['offset']).rjust(8, b"\x00")
         tx_hash = sha3(json.dumps(t))
-        leaf = b''.join([tx_hash, offset])  # hash = leaf[:32] & sum = leaf[32:]
+        leaf = b''.join([tx_hash[:24], offset])  # hash = leaf[:24] & sum = leaf[24:]
         db.put(leaf, json.dumps(t))
         merkle_leaves.append(leaf)
     merkle_root = construct_tree(db, merkle_leaves)
@@ -128,7 +128,7 @@ def generate_dummy_block(db, num_txs, random_interval, total_deposits):
     for t in full_tx_list:
         offset = int_to_bytes(t['contents']['offset']).rjust(8, b"\x00")
         tx_hash = sha3(json.dumps(t))
-        leaf = b''.join([tx_hash, offset])  # hash = leaf[:32] & sum = leaf[32:]
+        leaf = b''.join([tx_hash[:24], offset])  # hash = leaf[:24] & sum = leaf[24:]
         db.put(leaf, json.dumps(t))
         merkle_leaves.append(leaf)
     merkle_root = construct_tree(db, merkle_leaves)
