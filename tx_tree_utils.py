@@ -2,6 +2,15 @@ from ethereum.utils import sha3, bytes_to_int, int_to_bytes, encode_hex
 import json
 import random
 
+# Tx array positions -- [parent_hash, parent_block, start, offset, recipient, signature]
+PARENT_BLOCK_INDEX = 0
+START_INDEX = 1
+OFFSET_INDEX = 2
+TO_INDEX = 3
+FROM_INDEX = 4
+SIG_INDEX = 5
+DEPOSIT_PARENT_HASH = 32 * b'\x00'
+
 class EphemDB():
     def __init__(self, kv=None):
         self.kv = kv or {}
@@ -20,12 +29,12 @@ def fill_tx_list_with_notxs(txs):
     full_tx_list = []
     for t in txs:
         # Add notx range if needed
-        if t['contents']['start'] > next_start_pos:
-            notx_offset = t['contents']['start'] - next_start_pos
-            full_tx_list.append({'type': 'notx', 'contents': {'start': next_start_pos, 'offset': notx_offset}})
+        if t[START_INDEX] > next_start_pos:
+            notx_offset = t[START_INDEX] - next_start_pos
+            full_tx_list.append([0, next_start_pos, notx_offset, 'notx', 'notx'])
             next_start_pos += notx_offset
-        assert t['contents']['start'] == next_start_pos
-        next_start_pos += t['contents']['offset']
+        assert t[START_INDEX] == next_start_pos
+        next_start_pos += t[OFFSET_INDEX]
         full_tx_list.append(t)
     return full_tx_list
 
@@ -91,14 +100,14 @@ def get_txs_at_index(db, root, range_start):
     return follow_path(root, 0, range_start)
 
 def get_sum_hash_of_tx(tx):
-    offset = int_to_bytes(tx['contents']['offset']).rjust(8, b"\x00")
+    offset = int_to_bytes(tx[OFFSET_INDEX]).rjust(8, b"\x00")
     tx_hash = sha3(json.dumps(tx))
     return b''.join([tx_hash[:24], offset])
 
 def make_block_from_txs(db, txs):
     merkle_leaves = []
     for t in txs:
-        offset = int_to_bytes(t['contents']['offset']).rjust(8, b"\x00")
+        offset = int_to_bytes(t[OFFSET_INDEX]).rjust(8, b"\x00")
         tx_hash = sha3(json.dumps(t))
         leaf = b''.join([tx_hash[:24], offset])  # hash = leaf[:24] & sum = leaf[24:]
         db.put(leaf, json.dumps(t))
@@ -106,8 +115,6 @@ def make_block_from_txs(db, txs):
     merkle_root = construct_tree(db, merkle_leaves)
     return merkle_root
 
-
-# tx = ['send', [[[parent_hash, parent_block],...], start, offset, recipient], signature]
 def generate_dummy_txs(num_txs, random_interval, total_deposits):
     txs = []
     last_start = 0
@@ -118,7 +125,7 @@ def generate_dummy_txs(num_txs, random_interval, total_deposits):
         if bool(random.getrandbits(1)):
             last_start += next_offset
             continue
-        txs.append({'type:': 'send', 'contents': {'start': last_start, 'offset': next_offset, 'owner': 'alice'}, 'sig': 'sig'})
+        txs.append([0, last_start, next_offset, 'alice', 'alice', 'sig'])
         last_start += next_offset
     return txs
 
@@ -126,7 +133,7 @@ def generate_dummy_block(db, num_txs, random_interval, total_deposits):
     full_tx_list = fill_tx_list_with_notxs(generate_dummy_txs(num_txs, random_interval, total_deposits))
     merkle_leaves = []
     for t in full_tx_list:
-        offset = int_to_bytes(t['contents']['offset']).rjust(8, b"\x00")
+        offset = int_to_bytes(t[OFFSET_INDEX]).rjust(8, b"\x00")
         tx_hash = sha3(json.dumps(t))
         leaf = b''.join([tx_hash[:24], offset])  # hash = leaf[:24] & sum = leaf[24:]
         db.put(leaf, json.dumps(t))

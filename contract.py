@@ -1,5 +1,5 @@
 from ethereum.utils import sha3, int_to_bytes, bytes_to_int
-from tx_tree_utils import get_sum_hash_of_tx
+from tx_tree_utils import get_sum_hash_of_tx, PARENT_BLOCK_INDEX, START_INDEX, OFFSET_INDEX, TO_INDEX, FROM_INDEX, SIG_INDEX
 
 
 EXIT_CHALLENGE_PERIOD = 10
@@ -16,34 +16,35 @@ class PlasmaContract():
         self.time = 0
         self.exits = []
 
-    def deposit(self, token, amount, owner):
+    def deposit(self, symbol, amount, owner):
         if amount < 1:
             raise Exception('Deposit must be positive!')
-        if token not in self.total_deposits:
-            self.total_deposits[token] = 0
+        if symbol not in self.total_deposits:
+            self.total_deposits[symbol] = 0
         next_block = self.blocknumber+1
         if next_block not in self.deposits:
             self.deposits[next_block] = []
         # Record the deposit
         deposit_record = {
-            'token_name': token,
-            'start': self.total_deposits[token],
+            'token_name': symbol,
+            'start': self.total_deposits[symbol],
             'amount': amount,
             'owner': owner
         }
         self.deposits[next_block].append(deposit_record)
-        self.total_deposits[token] += amount
+        self.total_deposits[symbol] += amount
 
     def add_block(self, blockhash):
         self.blocks.append(blockhash)
         self.blocknumber += 1
 
-    def exit(self, token, start, offset, owner):
-        assert start + offset < self.total_deposits[token]
+    def exit(self, symbol, tx_blocknumber, start, offset, owner):
+        assert start + offset < self.total_deposits[symbol]
         self.exits.append({
             'timestamp': self.time,
             'start': start,
             'offset': offset,
+            'blocknumber': tx_blocknumber,
             'challenge_blocks': [],
             'challenge_txs': [],
             'owner': owner
@@ -59,7 +60,21 @@ class PlasmaContract():
                 new_value = b''.join([proof[i][1], h])
             new_sum = int_to_bytes(bytes_to_int(h[24:]) + bytes_to_int(proof[i][1][24:])).rjust(8, b"\x00")
             h = b''.join([sha3(new_value)[:24], new_sum])
+        print(h)
+        print(proof[-1])
         return h == proof[-1]
+
+    def challenge_spend(self, exit_index, coin_id, blocknumber_of_spend, exit_tx, exit_proof, spend_tx, spend_proof):
+        # Check that the challenge period isn't up
+        assert self.time < self.exits[exit_index]['timestamp'] + EXIT_CHALLENGE_PERIOD
+        # Check that the challenge is of the correct coin
+        assert self.exits[exit_index]['start'] <= coin_id and coin_id < self.exits[exit_index]['start'] + self.exits[exit_index]['offset']
+        # Verify that the owner is not the exit owner (why would you challenge your own coin?)
+        assert spend_tx[TO_INDEX] != self.exits[exit_index]['owner']
+        # Check that the transaction is in the specified block
+        assert self.verify_merkle_proof(self.blocks[blocknumber_of_spend], spend_tx, spend_proof)
+        # Check that the transaction does spend the exit_tx
+        print('lady luck shines again')
 
     def challenge_coin(self, exit_index, coin_id, blocknumber_of_spend, tx, proof):
         # Check that the challenge period isn't up
@@ -67,7 +82,7 @@ class PlasmaContract():
         # Check that the challenge is of the correct coin
         assert self.exits[exit_index]['start'] <= coin_id and coin_id < self.exits[exit_index]['start'] + self.exits[exit_index]['offset']
         # Verify that the owner is not the exit owner (why would you challenge your own coin?)
-        assert tx['contents']['owner'] != self.exits[exit_index]['owner']
+        assert tx[FROM_INDEX] != self.exits[exit_index]['owner']
         # Check that the transaction is in the specified block
         assert self.verify_merkle_proof(self.blocks[blocknumber_of_spend], tx, proof)
         # Record challenge
@@ -82,7 +97,7 @@ class PlasmaContract():
         # Check that the transaction is in the specified block
         assert self.verify_merkle_proof(self.blocks[blocknumber_of_spend], tx, proof)
         # Check that the transaction references the challenge tx
-        assert tx['contents']['prev_tx'] == str(self.exits[exit_index]['challenge_txs'][challenge_index])
+        assert tx[PARENT_BLOCK_INDEX] == self.exits[exit_index]['blocknumber']
         # Delete invalid challenge. TODO: Forfit bond
         del self.exits[exit_index]['challenge_blocks'][challenge_index]
         del self.exits[exit_index]['challenge_txs'][challenge_index]
