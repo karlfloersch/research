@@ -1,4 +1,4 @@
-web3
-eth-tester
-py-evm
+web3==4.4.1
+py-evm==0.2.0a33
+eth-tester[py-evm]==0.1.0b33
 pytest
