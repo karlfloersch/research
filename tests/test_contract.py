@@ -1,5 +1,6 @@
 
-EXIT_PERIOD = 20
+CHALLENGE_PERIOD = 20
+PLASMA_BLOCK_INTERVAL = 10
 DEPOSIT_VALUE = 1039
 EXIT_VALUE = 157
 
@@ -16,6 +17,26 @@ def test_deposits(plasmaprime, w3):
         assert plasmaprime.functions.deposits(account).call() == DEPOSIT_VALUE
 
     assert plasmaprime.functions.total_deposits().call() == DEPOSIT_VALUE * len(w3.eth.accounts)
+
+def test_publish(plasmaprime, w3, tester):
+    for i in range(10):
+        # mine enough ethereum blocks to satisfy the minimum interval between plasma blocks
+        blocks = tester.mine_blocks(num_blocks=PLASMA_BLOCK_INTERVAL)
+
+        # publish some example hash
+        h = w3.eth.getBlock('latest').hash
+        bn = plasmaprime.functions.plasma_block_number().call()
+        tx_hash = plasmaprime.functions.publish_hash(h).transact()
+        tx_receipt = w3.eth.waitForTransactionReceipt(tx_hash)
+
+        # check the correct hash was published
+        assert h == plasmaprime.functions.hash_chain(bn).call()
+
+        # confirm we can't immediately publish a new hash
+        blocks = tester.mine_blocks(num_blocks=1)
+        with pytest.raises(TransactionFailed):
+            tx_hash = plasmaprime.functions.publish_hash(h).transact()
+            tx_receipt = w3.eth.waitForTransactionReceipt(tx_hash)
 
 def test_exits(plasmaprime, w3, tester):
     w3.eth.defaultAccount = w3.eth.accounts[1]
@@ -48,7 +69,7 @@ def test_exits(plasmaprime, w3, tester):
     assert start_balance == end_balance
 
     # mine blocks until the challenge period is over
-    blocks = tester.mine_blocks(num_blocks=EXIT_PERIOD)
+    blocks = tester.mine_blocks(num_blocks=CHALLENGE_PERIOD)
 
     # try again to finalize exit
     start_balance = w3.eth.getBalance(w3.eth.defaultAccount)
@@ -56,3 +77,5 @@ def test_exits(plasmaprime, w3, tester):
     tx_receipt = w3.eth.waitForTransactionReceipt(tx_hash)
     end_balance = w3.eth.getBalance(w3.eth.defaultAccount)
     assert end_balance - start_balance == offset
+
+    w3.eth.defaultAccount = w3.eth.accounts[0]
