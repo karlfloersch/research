@@ -10,8 +10,8 @@ exits: public(
     owner: address,
     plasma_block: uint256,
     eth_block: uint256,
-    start: wei_value,
-    offset: wei_value
+    start: uint256,
+    offset: uint256,
 }[uint256])
 exit_nonce: public(uint256)
 
@@ -19,6 +19,8 @@ exit_nonce: public(uint256)
 CHALLENGE_PERIOD: constant(uint256) = 20
 # minimum number of ethereum blocks between new plasma blocks
 PLASMA_BLOCK_INTERVAL: constant(uint256) = 10
+#
+MAX_TREE_DEPTH: constant(uint256) = 8
 
 @public
 def __init__():
@@ -44,7 +46,7 @@ def publish_hash(block_hash: bytes32):
     self.last_publish = block.number
 
 @public
-def submit_exit(bn: uint256, start: wei_value, offset: wei_value) -> uint256:
+def submit_exit(bn: uint256, start: uint256, offset: uint256) -> uint256:
     assert bn <= self.plasma_block_number
     assert offset > 0
 
@@ -62,6 +64,12 @@ def submit_exit(bn: uint256, start: wei_value, offset: wei_value) -> uint256:
 def finalize_exit(exit_id: uint256):
     assert block.number >= self.exits[exit_id].eth_block + CHALLENGE_PERIOD
 
-    send(self.exits[exit_id].owner, self.exits[exit_id].offset)
-    self.total_deposits -= self.exits[exit_id].offset
+    send(self.exits[exit_id].owner, as_wei_value(self.exits[exit_id].offset, 'wei'))
+    self.total_deposits -= as_wei_value(self.exits[exit_id].offset, 'wei')
 
+@public
+def challenge_completeness(
+        exit_id: uint256,
+        token_id: uint256,
+):
+    pass
