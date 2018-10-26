@@ -39,9 +39,9 @@ def publish_hash(block_hash: bytes32):
     assert msg.sender == self.operator
     assert block.number >= self.last_publish + PLASMA_BLOCK_INTERVAL
 
-    bn: uint256 = self.plasma_block_number
-    self.hash_chain[bn] = block_hash
+    self.hash_chain[self.plasma_block_number] = block_hash
     self.plasma_block_number += 1
+    self.last_publish = block.number
 
 @public
 def submit_exit(bn: uint256, start: wei_value, offset: wei_value) -> uint256:
