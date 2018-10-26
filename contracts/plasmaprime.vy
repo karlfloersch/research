@@ -58,6 +58,7 @@ def publish_hash(block_hash: bytes32):
 def submit_exit(bn: uint256, start: uint256, offset: uint256) -> uint256:
     assert bn <= self.plasma_block_number
     assert offset > 0
+    assert offset < as_unitless_number(self.total_deposits)
 
     self.exits[self.exit_nonce].owner = msg.sender
     self.exits[self.exit_nonce].plasma_block = bn
@@ -82,11 +83,17 @@ def finalize_exit(exit_id: uint256):
 def challenge_completeness(
         exit_id: uint256,
         token_id: uint256,
-):
+) -> uint256:
+    assert exit_id < self.exit_nonce
+
     self.challenges[self.challenge_nonce].exit_id = exit_id
     self.challenges[self.challenge_nonce].ongoing = True
     self.challenges[self.challenge_nonce].token_id = token_id
     self.exits[exit_id].challenge_count += 1
+
+    challenge_id: uint256 = self.challenge_nonce
+    self.challenge_nonce += 1
+    return challenge_id
 
 @public
 def respond_completeness(challenge_id: uint256):
