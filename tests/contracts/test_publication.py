@@ -13,7 +13,6 @@ def test_publication(w3, tester, pp):
         h = w3.eth.getBlock('latest').hash
         bn = pp.plasma_block_number()
         tx_hash = pp.publish_hash(h, transact={})
-        tx_receipt = w3.eth.waitForTransactionReceipt(tx_hash)
 
         # check the correct hash was published
         assert h == pp.hash_chain(bn)

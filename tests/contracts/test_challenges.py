@@ -16,17 +16,14 @@ TOKEN_INDEX = 5
 def test_challenges(w3, tester, pp):
     # deposit
     tx_hash = pp.deposit(transact={'value': EXIT_VALUE})
-    tx_receipt = w3.eth.waitForTransactionReceipt(tx_hash)
 
     # publish a plasma block
     tester.mine_blocks(num_blocks=PLASMA_BLOCK_INTERVAL)
     h = w3.eth.getBlock('latest').hash
     tx_hash = pp.publish_hash(h, transact={})
-    tx_receipt = w3.eth.waitForTransactionReceipt(tx_hash)
 
     # submit exit
     tx_hash = pp.submit_exit(PLASMA_BLOCK, EXIT_START_INDEX, EXIT_VALUE, transact={})
-    tx_receipt = w3.eth.waitForTransactionReceipt(tx_hash)
 
     # confirm we can't challenge exits that don't exist yet
     with raises(TransactionFailed):
@@ -37,7 +34,6 @@ def test_challenges(w3, tester, pp):
     for i in range(CHALLENGE_COUNT):
         challenge_id = pp.challenge_completeness(EXIT_ID, TOKEN_INDEX)
         tx_hash = pp.challenge_completeness(EXIT_ID, TOKEN_INDEX, transact={})
-        tx_receipt = w3.eth.waitForTransactionReceipt(tx_hash)
 
         # confirm challenge is processed correctly
         assert pp.challenges__exit_id(0) == EXIT_ID
@@ -69,12 +65,10 @@ def test_challenges(w3, tester, pp):
             proof,
             transact={},
             )
-        tx_receipt = w3.eth.waitForTransactionReceipt(tx_hash)
         assert pp.exits__challenge_count(EXIT_ID) == CHALLENGE_COUNT - i - 1
 
     # confirm we can successfully exit after responding to all challenges
     start_balance = w3.eth.getBalance(w3.eth.defaultAccount)
     tx_hash = pp.finalize_exit(EXIT_ID, transact={})
-    tx_receipt = w3.eth.waitForTransactionReceipt(tx_hash)
     end_balance = w3.eth.getBalance(w3.eth.defaultAccount)
     assert end_balance - start_balance == EXIT_VALUE

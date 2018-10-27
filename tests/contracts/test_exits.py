@@ -21,7 +21,6 @@ def test_exits(w3, tester, pp):
     # submit exit
     exit_id = pp.submit_exit(PLASMA_BLOCK, START, OFFSET)
     tx_hash = pp.submit_exit(PLASMA_BLOCK, START, OFFSET, transact={})
-    tx_receipt = w3.eth.waitForTransactionReceipt(tx_hash)
 
     # confirm on-chain exit data is correct
     assert pp.exits__owner(exit_id) == w3.eth.defaultAccount
@@ -41,6 +40,5 @@ def test_exits(w3, tester, pp):
     # confirm we can successfully exit now
     start_balance = w3.eth.getBalance(w3.eth.defaultAccount)
     tx_hash = pp.finalize_exit(exit_id, transact={})
-    tx_receipt = w3.eth.waitForTransactionReceipt(tx_hash)
     end_balance = w3.eth.getBalance(w3.eth.defaultAccount)
     assert end_balance - start_balance == OFFSET
