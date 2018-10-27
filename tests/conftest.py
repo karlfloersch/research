@@ -1,6 +1,8 @@
 import pytest
 import os
+
 from web3 import Web3
+from web3.contract import ConciseContract
 from eth_tester import EthereumTester, PyEVMBackend
 from vyper import compiler
 
@@ -29,7 +31,7 @@ def pp(w3):
     factory = contract_factory(w3, 'contracts/plasmaprime.vy')
     tx_hash = factory.constructor().transact()
     tx_receipt = w3.eth.waitForTransactionReceipt(tx_hash)
-    return w3.eth.contract(
+    return ConciseContract(w3.eth.contract(
         address=tx_receipt.contractAddress,
         abi=factory.abi,
-    )
+    ))

@@ -11,13 +11,13 @@ def test_publication(w3, tester, pp):
 
         # publish some example hash
         h = w3.eth.getBlock('latest').hash
-        bn = pp.functions.plasma_block_number().call()
-        tx_hash = pp.functions.publish_hash(h).transact()
+        bn = pp.plasma_block_number()
+        tx_hash = pp.publish_hash(h, transact={})
         tx_receipt = w3.eth.waitForTransactionReceipt(tx_hash)
 
         # check the correct hash was published
-        assert h == pp.functions.hash_chain(bn).call()
+        assert h == pp.hash_chain(bn)
 
         # confirm we can't immediately publish a new hash
         with raises(TransactionFailed):
-            tx_hash = pp.functions.publish_hash(h).transact()
+            tx_hash = pp.publish_hash(h, transact={})
