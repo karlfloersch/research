@@ -31,6 +31,25 @@ PLASMA_BLOCK_INTERVAL: constant(uint256) = 10
 MAX_TREE_DEPTH: constant(uint256) = 8
 
 @public
+def addr_to_bytes(addr: address) -> bytes[20]:
+    addr_bytes32: bytes[32] = concat(convert(addr, bytes32), "")
+    return slice(addr_bytes32, start=12, len=20)
+
+@public
+def tx_hash(
+        sender: address,
+        recipient: address,
+        start: uint256,
+        offset: uint256,
+) -> bytes32:
+    return sha3(concat(
+        self.addr_to_bytes(sender),
+        self.addr_to_bytes(recipient),
+        convert(start, bytes32),
+        convert(offset, bytes32),
+    ))
+
+@public
 def __init__():
     self.operator = msg.sender
     self.total_deposits = 0
