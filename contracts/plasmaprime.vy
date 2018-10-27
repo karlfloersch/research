@@ -41,12 +41,14 @@ def tx_hash(
         recipient: address,
         start: uint256,
         offset: uint256,
+        signature: bytes[65],
 ) -> bytes32:
     return sha3(concat(
         self.addr_to_bytes(sender),
         self.addr_to_bytes(recipient),
         convert(start, bytes32),
         convert(offset, bytes32),
+        signature,
     ))
 
 @public
@@ -123,6 +125,10 @@ def respond_completeness(
         proof: bytes32[8],
 ):
     assert self.challenges[challenge_id].ongoing == True
+
+    # tx_hash: bytes32 = self.tx_hash(sender, recipient, start, offset)
+
+    # for i in range(8):
 
     self.challenges[challenge_id].ongoing = False
     exit_id: uint256 = self.challenges[challenge_id].exit_id
