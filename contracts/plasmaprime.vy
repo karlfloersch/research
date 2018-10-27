@@ -96,7 +96,14 @@ def challenge_completeness(
     return challenge_id
 
 @public
-def respond_completeness(challenge_id: uint256):
+def respond_completeness(
+        challenge_id: uint256,
+        sender: address,
+        recipient: address,
+        start: uint256,
+        offset: uint256,
+        proof: bytes32[8],
+):
     assert self.challenges[challenge_id].ongoing == True
 
     self.challenges[challenge_id].ongoing = False
