@@ -60,16 +60,15 @@ def submit_exit(bn: uint256, start: uint256, offset: uint256) -> uint256:
     assert offset > 0
     assert offset <= as_unitless_number(self.total_deposits)
 
-    self.exits[self.exit_nonce].owner = msg.sender
-    self.exits[self.exit_nonce].plasma_block = bn
-    self.exits[self.exit_nonce].eth_block = block.number
-    self.exits[self.exit_nonce].start = start
-    self.exits[self.exit_nonce].offset = offset
-    self.exits[self.exit_nonce].challenge_count = 0
-
-    exit_id : uint256 = self.exit_nonce
+    en: uint256 = self.exit_nonce
+    self.exits[en].owner = msg.sender
+    self.exits[en].plasma_block = bn
+    self.exits[en].eth_block = block.number
+    self.exits[en].start = start
+    self.exits[en].offset = offset
+    self.exits[en].challenge_count = 0
     self.exit_nonce += 1
-    return exit_id
+    return en
 
 @public
 def finalize_exit(exit_id: uint256):
@@ -86,14 +85,14 @@ def challenge_completeness(
 ) -> uint256:
     assert exit_id < self.exit_nonce
 
-    self.challenges[self.challenge_nonce].exit_id = exit_id
-    self.challenges[self.challenge_nonce].ongoing = True
-    self.challenges[self.challenge_nonce].token_id = token_id
+    cn: uint256 = self.challenge_nonce
+    self.challenges[cn].exit_id = exit_id
+    self.challenges[cn].ongoing = True
+    self.challenges[cn].token_id = token_id
     self.exits[exit_id].challenge_count += 1
 
-    challenge_id: uint256 = self.challenge_nonce
     self.challenge_nonce += 1
-    return challenge_id
+    return cn
 
 @public
 def respond_completeness(
