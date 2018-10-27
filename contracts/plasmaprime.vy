@@ -58,7 +58,7 @@ def publish_hash(block_hash: bytes32):
 def submit_exit(bn: uint256, start: uint256, offset: uint256) -> uint256:
     assert bn <= self.plasma_block_number
     assert offset > 0
-    assert offset < as_unitless_number(self.total_deposits)
+    assert offset <= as_unitless_number(self.total_deposits)
 
     self.exits[self.exit_nonce].owner = msg.sender
     self.exits[self.exit_nonce].plasma_block = bn
