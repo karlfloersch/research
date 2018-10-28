@@ -30,10 +30,34 @@ PLASMA_BLOCK_INTERVAL: constant(uint256) = 10
 #
 MAX_TREE_DEPTH: constant(uint256) = 8
 
+# @public
+# def ecrecover_util(message_hash: bytes32, signature: bytes[65]) -> address:
+#     v: uint256 = extract32(slice(signature, start=0, len=32), 0, type=uint256)
+#     r: uint256 = extract32(slice(signature, start=32, len=64), 0, type=uint256)
+#     s: bytes[1] = slice(signature, start=64, len=1)
+#     s_pad: uint256 = extract32(s, 0, type=uint256)
+#
+#     addr: address = ecrecover(message_hash, v, r, s_pad)
+#     return addr
+
 @public
 def addr_to_bytes(addr: address) -> bytes[20]:
     addr_bytes32: bytes[32] = concat(convert(addr, bytes32), "")
     return slice(addr_bytes32, start=12, len=20)
+
+@public
+def plasma_message_hash(
+        sender: address,
+        recipient: address,
+        start: uint256,
+        offset: uint256,
+) -> bytes32:
+    return sha3(concat(
+        self.addr_to_bytes(sender),
+        self.addr_to_bytes(recipient),
+        convert(start, bytes32),
+        convert(offset, bytes32),
+    ))
 
 @public
 def tx_hash(
@@ -41,14 +65,18 @@ def tx_hash(
         recipient: address,
         start: uint256,
         offset: uint256,
-        signature: bytes[65],
+        sig_v: uint256,
+        sig_r: uint256,
+        sig_s: uint256,
 ) -> bytes32:
     return sha3(concat(
         self.addr_to_bytes(sender),
         self.addr_to_bytes(recipient),
         convert(start, bytes32),
         convert(offset, bytes32),
-        signature,
+        convert(sig_v, bytes32),
+        convert(sig_r, bytes32),
+        convert(sig_s, bytes32),
     ))
 
 @public
@@ -122,6 +150,9 @@ def respond_completeness(
         recipient: address,
         start: uint256,
         offset: uint256,
+        sig_v: uint256,
+        sig_r: uint256,
+        sig_s: uint256,
         proof: bytes32[8],
 ):
     assert self.challenges[challenge_id].ongoing == True
