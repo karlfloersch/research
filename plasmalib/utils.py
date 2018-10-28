@@ -63,7 +63,7 @@ class NullTx:
         # self.r = r
         # self.s = s
 
-def pairwise(l):
+def pairs(l):
     return [(l[i], l[i + 1]) for i in range(0, len(l), 2)]
 
 # assumes no overlapping txs
@@ -80,9 +80,8 @@ def blockhash(txs):
     nodes = leaves
     # depth = 1
     for i in range(depth):
-        print(len(nodes))
-        [PP.pprint(n.h) for n in nodes]
-        nodes = list(map(lambda x: MST(fst(x), snd(x)), pairwise(nodes)))
+        nodes = list(map(lambda x: MST(fst(x), snd(x)), pairs(nodes)))
+    return nodes[0].h
 
 
 def addr_to_bytes(addr):
