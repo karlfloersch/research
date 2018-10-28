@@ -1,6 +1,6 @@
 from pytest import raises
 from eth_tester.exceptions import TransactionFailed
-from constants import *
+from plasmalib.constants import CHALLENGE_PERIOD, PLASMA_BLOCK_INTERVAL
 
 
 def test_exits(w3, tester, pp):

@@ -5,6 +5,7 @@ from web3 import Web3
 from web3.contract import ConciseContract
 from eth_tester import EthereumTester, PyEVMBackend
 from vyper import compiler
+from plasmalib.utils import contract_factory
 
 
 @pytest.fixture(scope="session")
@@ -18,17 +19,12 @@ def w3(tester):
     w3.eth.defaultAccount = w3.eth.accounts[0]
     return w3
 
-def contract_factory(w3, path):
-    wd = os.path.dirname(os.path.realpath(__file__))
-    with open(os.path.join(wd, os.pardir, path)) as f:
-        source = f.read()
-    bytecode = '0x' + compiler.compile(source).hex()
-    abi = compiler.mk_full_signature(source)
-    return w3.eth.contract(abi=abi, bytecode=bytecode)
-
 @pytest.fixture
 def pp(w3):
-    factory = contract_factory(w3, 'contracts/plasmaprime.vy')
+    wd = os.path.dirname(os.path.realpath(__file__))
+    with open(os.path.join(wd, os.pardir, 'contracts/plasmaprime.vy')) as f:
+        source = f.read()
+    factory = contract_factory(w3, source)
     tx_hash = factory.constructor().transact()
     tx_receipt = w3.eth.waitForTransactionReceipt(tx_hash)
     return ConciseContract(w3.eth.contract(
