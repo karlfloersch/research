@@ -3,24 +3,31 @@ from eth_tester.exceptions import TransactionFailed
 from plasmalib.constants import CHALLENGE_PERIOD, PLASMA_BLOCK_INTERVAL
 
 
-def test_exits(w3, tester, pp):
-    DEPOSIT_VALUE = 555
-
-    # deposit
-    pp.deposit(transact={'value': DEPOSIT_VALUE})
+def test_exits(w3, tester, pp_live):
+    pp = pp_live
 
     # exit params
     PLASMA_BLOCK = 0
     START = 0
     OFFSET = 55
 
-    # confirm we can't request exits for > total_deposit_value
+    # make a deposit
+    DEPOSIT_VALUE = 500
+    pp.deposit(transact={'value': DEPOSIT_VALUE})
+
+    # confirm we can't submit exits for future plasma blocks
+    bn = pp.plasma_block_number()
     with raises(TransactionFailed):
-        tx_hash = pp.submit_exit(PLASMA_BLOCK, START, DEPOSIT_VALUE + 1, transact={})
+        pp.submit_exit(bn, START, 1, transact={})
+
+    # confirm we can't request exits for > total_deposit_value
+    dv = pp.total_deposits()
+    with raises(TransactionFailed):
+        pp.submit_exit(PLASMA_BLOCK, START, dv + 1, transact={})
 
     # submit exit
     exit_id = pp.submit_exit(PLASMA_BLOCK, START, OFFSET)
-    tx_hash = pp.submit_exit(PLASMA_BLOCK, START, OFFSET, transact={})
+    pp.submit_exit(PLASMA_BLOCK, START, OFFSET, transact={})
 
     # confirm on-chain exit data is correct
     assert pp.exits__owner(exit_id) == w3.eth.defaultAccount
