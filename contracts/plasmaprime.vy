@@ -18,7 +18,7 @@ challenges: public(
 {
     exit_id: uint256,
     ongoing: bool,
-    token_id: uint256,
+    token_index: uint256,
 }[uint256])
 exit_nonce: public(uint256)
 challenge_nonce: public(uint256)
@@ -130,14 +130,19 @@ def finalize_exit(exit_id: uint256):
 @public
 def challenge_completeness(
         exit_id: uint256,
-        token_id: uint256,
+        token_index: uint256,
 ) -> uint256:
+    # check the exit being challenged exists
     assert exit_id < self.exit_nonce
+
+    # check the token index being challenged is in the range being exited
+    assert token_index >= self.exits[exit_id].start
+    assert token_index < self.exits[exit_id].start + self.exits[exit_id].offset
 
     cn: uint256 = self.challenge_nonce
     self.challenges[cn].exit_id = exit_id
     self.challenges[cn].ongoing = True
-    self.challenges[cn].token_id = token_id
+    self.challenges[cn].token_index = token_index
     self.exits[exit_id].challenge_count += 1
 
     self.challenge_nonce += 1
@@ -157,10 +162,41 @@ def respond_completeness(
 ):
     assert self.challenges[challenge_id].ongoing == True
 
-    # tx_hash: bytes32 = self.tx_hash(sender, recipient, start, offset)
-
-    # for i in range(8):
-
-    self.challenges[challenge_id].ongoing = False
     exit_id: uint256 = self.challenges[challenge_id].exit_id
+    exit_owner: address = self.exits[exit_id].owner
+    exit_plasma_block: uint256 = self.exits[exit_id].plasma_block
+    challenged_index: uint256 = self.challenges[challenge_id].token_index
+
+    # compute message hash
+    message_hash: bytes32 = self.plasma_message_hash(sender, recipient, start, offset)
+
+    # check transaction is signed correctly
+    addr: address = ecrecover(message_hash, sig_v, sig_r, sig_s)
+    assert addr == sender
+
+    # check exit owner is indeed recipient
+    assert recipient == exit_owner
+
+    # check transaction covers challenged index
+    assert challenged_index >= start
+    assert challenged_index < (start + offset)
+
+    # check transaction was included in plasma block hash
+    root: bytes32 = self.tx_hash(
+        sender,
+        recipient,
+        start,
+        offset,
+        sig_v,
+        sig_r,
+        sig_s,
+    )
+    for i in range(8):
+        if convert(proof[i], uint256) == 0:
+            break
+        root = sha3(concat(root, proof[i]))
+    assert root == self.hash_chain[exit_plasma_block]
+
+    # response was successful
+    self.challenges[challenge_id].ongoing = False
     self.exits[exit_id].challenge_count -= 1
