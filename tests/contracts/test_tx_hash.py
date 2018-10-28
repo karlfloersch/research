@@ -5,12 +5,7 @@ from plasmalib.constants import CHALLENGE_PERIOD, PLASMA_BLOCK_INTERVAL
 from plasmalib.utils import get_message_hash, addr_to_bytes, to_bytes32, get_tx_hash
 
 
-def test_tx_hash(w3, tester, pp):
-    # create an account to work with
-    acct = Account.create('some entropy')
-    STARTING_VALUE = 1000
-    w3.eth.sendTransaction({'to': acct.address, 'value': STARTING_VALUE})
-
+def test_tx_hash(w3, tester, pp, acct):
     # plasma message info
     SENDER = w3.eth.defaultAccount
     RECIPIENT = w3.eth.defaultAccount
