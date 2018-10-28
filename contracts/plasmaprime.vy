@@ -105,7 +105,7 @@ def publish_hash(block_hash: bytes32):
 
 @public
 def submit_exit(bn: uint256, start: uint256, offset: uint256) -> uint256:
-    assert bn <= self.plasma_block_number
+    assert bn < self.plasma_block_number
     assert offset > 0
     assert offset <= as_unitless_number(self.total_deposits)
 
@@ -139,6 +139,7 @@ def challenge_completeness(
     assert token_index >= self.exits[exit_id].start
     assert token_index < self.exits[exit_id].start + self.exits[exit_id].offset
 
+    # store challenge
     cn: uint256 = self.challenge_nonce
     self.challenges[cn].exit_id = exit_id
     self.challenges[cn].ongoing = True
