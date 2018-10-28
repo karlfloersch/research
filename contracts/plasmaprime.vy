@@ -90,9 +90,11 @@ def __init__():
 
 @public
 @payable
-def deposit():
+def deposit() -> uint256:
+    r: uint256 = as_unitless_number(self.total_deposits)
     self.deposits[msg.sender] += msg.value
     self.total_deposits += msg.value
+    return r
 
 @public
 def publish_hash(block_hash: bytes32):
