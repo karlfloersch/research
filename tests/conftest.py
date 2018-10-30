@@ -33,6 +33,18 @@ def acct(w3):
     return acct
 
 @pytest.fixture
+def accts(w3):
+    seed()
+    STARTING_VALUE = Web3.toWei(100, 'ether')
+    PASSPHRASE = 'not a real passphrase'
+    accts = [Account.create(randrange(10**32)) for i in range(10)]
+    for i in range(10):
+        w3.eth.sendTransaction({'to': accts[i].address, 'value': STARTING_VALUE})
+        w3.personal.importRawKey(accts[i].privateKey, PASSPHRASE)
+        w3.personal.unlockAccount(accts[i].address, PASSPHRASE)
+    return accts
+
+@pytest.fixture
 def pp(w3):
     wd = os.path.dirname(os.path.realpath(__file__))
     with open(os.path.join(wd, os.pardir, 'contracts/plasmaprime.vy')) as f:

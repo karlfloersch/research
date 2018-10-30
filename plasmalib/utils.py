@@ -67,7 +67,7 @@ def pairs(l):
     return [(l[i], l[i + 1]) for i in range(0, len(l), 2)]
 
 # assumes no overlapping txs
-def blockhash(txs):
+def construct_tree(txs):
     depth = ceil(log(len(txs), 2))
     assert depth <= MAX_TREE_DEPTH
 
@@ -81,7 +81,7 @@ def blockhash(txs):
     # depth = 1
     for i in range(depth):
         nodes = list(map(lambda x: MST(fst(x), snd(x)), pairs(nodes)))
-    return nodes[0].h
+    return nodes[0]
 
 
 def addr_to_bytes(addr):
