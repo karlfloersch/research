@@ -14,11 +14,11 @@ def test_tx_hash(w3, tester, pp, acct):
 
     # compute signature to be included in plasma tx
     msg = Msg(SENDER, RECIPIENT, START, OFFSET)
-    message_hash = msg.get_hash()
+    message_hash = msg.h
 
     # compute expected tx hash
     tx = Tx(msg, acct.signHash)
-    expected_tx_hash = tx.get_hash()
+    expected_tx_hash = tx.h
 
     # confirm tx hashes match
     tx_hash = pp.tx_hash(
@@ -26,8 +26,8 @@ def test_tx_hash(w3, tester, pp, acct):
         RECIPIENT,
         START,
         OFFSET,
-        tx.sig.v,
-        tx.sig.r,
-        tx.sig.s,
+        tx.sigv,
+        tx.sigr,
+        tx.sigs,
     )
     assert tx_hash == expected_tx_hash

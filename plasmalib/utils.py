@@ -6,6 +6,7 @@ from vyper import compiler
 from math import floor, ceil, log
 from hexbytes import HexBytes
 from plasmalib.constants import *
+# import json
 
 from pprint import PrettyPrinter
 PP = PrettyPrinter(indent=4)
@@ -20,7 +21,7 @@ class MST:
 class Leaf:
     def __init__(self, tx):
         self.tx = tx
-        self.h = tx.get_hash()
+        self.h = tx.h
 
 class Msg:
     def __init__(self, sender, recipient, start, offset):
@@ -28,9 +29,7 @@ class Msg:
         self.recipient = recipient
         self.start = start
         self.offset = offset
-
-    def get_hash(self):
-        return Web3.sha3(
+        self.h = Web3.sha3(
             addr_to_bytes(self.sender) +
             addr_to_bytes(self.recipient) +
             to_bytes32(self.start) +
@@ -40,22 +39,27 @@ class Msg:
 class Tx:
     def __init__(self, msg, signer):
         self.msg = msg
-        self.sig = signer(msg.get_hash())
-
-    def get_hash(self):
-        return Web3.sha3(
+        # self.sig = signer(msg.h)
+        sig = signer(msg.h)
+        self.sigv = sig.v
+        self.sigr = sig.r
+        self.sigs = sig.s
+        self.h = Web3.sha3(
             addr_to_bytes(self.msg.sender) +
             addr_to_bytes(self.msg.recipient) +
             to_bytes32(self.msg.start) +
             to_bytes32(self.msg.offset) +
-            to_bytes32(self.sig.v) +
-            to_bytes32(self.sig.r) +
-            to_bytes32(self.sig.s)
+            to_bytes32(self.sigv) +
+            to_bytes32(self.sigr) +
+            to_bytes32(self.sigs)
         )
 
+    # def json(self):
+        # return json.dumps(self, default = lambda o: o.__dict__)
+
 class NullTx:
-    def get_hash(self):
-        return HexBytes(b'\x00' * 32)
+    def __init__(self):
+        self.h = HexBytes(b'\x00' * 32)
 
 # class Sig:
     # def __init__(self, v, r, s):

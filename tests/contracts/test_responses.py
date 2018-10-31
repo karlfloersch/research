@@ -28,7 +28,7 @@ def test_responses(w3, tester, pp, accts):
     # params
     sender = txs[0].msg.sender
     recipient = txs[0].msg.recipient
-    sig = txs[0].sig
+    sigv, sigr, sigs = txs[0].sigv, txs[0].sigr, txs[0].sigs
     proof = [bytes(root.l.r.h), bytes(root.r.h)] + ([b'\x00'] * 6)
 
     # submit exit
@@ -43,7 +43,7 @@ def test_responses(w3, tester, pp, accts):
         pp.finalize_exit(0, transact={'from': recipient})
 
     # respond to challenge
-    pp.respond_completeness(0, sender, recipient, 0, TX_VALUE, sig.v, sig.r, sig.s, proof, transact={'from': recipient})
+    pp.respond_completeness(0, sender, recipient, 0, TX_VALUE, sigv, sigr, sigs, proof, transact={'from': recipient})
 
     print(w3.eth.getBalance(recipient))
     pp.finalize_exit(0, transact={'from': recipient})
