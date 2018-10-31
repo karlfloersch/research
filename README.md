@@ -1,6 +1,6 @@
 **WARNING:** this is an experimental project. not for mainnet deployment.
 
-I'm currently in the process of rewriting the client-side construction of inclusion proofs for the exit game. Also, the vyper contract is still missing some challenge mechanisms. **Don't deposit any test eth if you plan on keeping it.**
+I'm currently in the process of rewriting the client-side construction of inclusion proofs for the exit game. Also, the vyper contract is still missing some challenge mechanisms. **Don't deposit any testnet eth if you plan on keeping it.**
 
 # installation
 ```
