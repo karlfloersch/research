@@ -7,6 +7,7 @@ I'm currently in the process of rewriting the client-side construction of inclus
 git clone https://github.com/endorphin/plasmaprime.git
 cd plasmaprime
 pip install -r requirements.txt
+python setup.py install
 ```
 # client usage
 create a new account (send your testnet eth to the created address):
