@@ -9,12 +9,29 @@ cd plasmaprime
 pip install -r requirements.txt
 ```
 # client usage
+create a new account (send your test eth to the created address):
 ```
 cd client
 plasma new
+```
+deposit some test eth:
+```
+plasma deposit --contract <address>
+```
+send a transaction:
+```
 plasma send --to <address> --ammount <value>
+```
+check your balance (and what ranges you own):
+```
 plasma query
+```
+watch for malicious exits:
+```
 plasma guard (not yet implemented)
+```
+withdraw your eth to the main chain:
+```
 plasma exit
 ```
 # protocol
