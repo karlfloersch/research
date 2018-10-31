@@ -26,7 +26,7 @@ check your balance (and what ranges you own):
 ```
 plasma query
 ```
-watch for malicious exits **not yet implemented**:
+watch for malicious exits (**not yet implemented**):
 ```
 plasma guard
 ```
