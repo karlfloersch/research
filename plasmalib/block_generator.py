@@ -23,7 +23,7 @@ total_deposits = 10
 txs = []
 for i in range(5):
     start = randrange(total_deposits-1)
-    offset = randrange(0, 5)
+    offset = randrange(1, 5)
     if start + offset > total_deposits:
         start -= offset
     txs.append(Msg('0x', '0x', start, offset))
@@ -45,12 +45,12 @@ buckets = []
 for idx, i in enumerate(list_of_starts_and_ends):
     if i in txs_by_start:
         active_txs = active_txs + txs_by_start[i]
-    if len(active_txs) == 0:
-        buckets.append([Msg('0x01', '0x01', i, list_of_starts_and_ends[idx+1] - i)])
-    else:
-        buckets.append(active_txs)
-    # Remove all txs which should now be dead
     active_txs = [tx for tx in active_txs if tx.start + tx.offset != i]
+    if len(active_txs) == 0 and idx+1 != len(list_of_starts_and_ends):
+        buckets.append((i, [Msg('0x01', '0x01', i, list_of_starts_and_ends[idx+1] - i)]))
+    else:
+        buckets.append((i, active_txs))
+    # Remove all txs which should now be dead
     print('starts:', [tx.start for tx in active_txs])
     print('ends:', [tx.start + tx.offset for tx in active_txs])
     print('current value:', i)
@@ -61,7 +61,7 @@ print([(tx.start, tx.offset) for tx in txs])
 print('~~~\nBuckets:')
 
 for bucket in buckets:
-    print([(tx.start, tx.offset, tx.sender) for tx in bucket])
+    print(bucket[0], [(tx.start, tx.offset, tx.sender) for tx in bucket[1]])
 
 # for tx in txs:
 #     bisect.insort(starts, tx.start)
