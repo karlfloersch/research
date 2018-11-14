@@ -1,4 +1,5 @@
 from plasmalib.utils import NullTx
+from eth_utils import encode_hex as encode_hex_0x
 from eth_utils import int_to_big_endian
 from web3 import Web3
 
@@ -28,7 +29,7 @@ class TxBucket():
             self.tx_merkle_tree_root_hash = add_sum_to_hash(root_hash, offset)
 
 def add_sum_to_hash(raw_hash, int_sum):
-    return b''.join([raw_hash, int_to_big_endian(int_sum).rjust(8, b"\x00")])
+    return b''.join([raw_hash[0:24], int_to_big_endian(int_sum).rjust(8, b"\x00")])
 
 def create_tx_buckets(db, txs):
     starts_and_ends = set()
@@ -64,19 +65,38 @@ def create_tx_buckets(db, txs):
         # print("~~~~")
     return buckets
 
-# def create_merkle_sum_tree(db, tx_buckets):
-#     if len(nodes) == 1:
-#         return nodes[0]
-#     remaining_nodes = []
-#     for i in range(0, len(nodes), 2):
-#         if i+1 == len(nodes):
-#             remaining_nodes.append(nodes[i])
-#             break
-#         new_value = b''.join([nodes[i], nodes[i+1]])
-#         new_hash = Web3.sha3(new_value)
-#         db.put(new_hash, new_value)
-#         remaining_nodes.append(new_hash)
-#     return merklize(db, remaining_nodes)
+def bytes_to_int(value):
+    return int.from_bytes(value, byteorder='big')
+
+def encode_hex(n):
+    if isinstance(n, str):
+        return encode_hex(n.encode('ascii'))
+    return encode_hex_0x(n)[2:]
+
+def set_first_bit(byte_value, one_or_zero):
+    if one_or_zero == 0:
+        return b"\x00"
+    if one_or_zero == 1:
+        return b"\x01"
+
+def construct_tree(db, nodes):
+    if len(nodes) == 1:
+        return nodes[0]
+    remaining_nodes = []
+    for i in range(0, len(nodes), 2):
+        if i+1 == len(nodes):
+            remaining_nodes.append(nodes[i])
+            break
+        left_value = nodes[i][1:].rjust(32, set_first_bit(nodes[i][0], 0))
+        right_value = nodes[i+1][1:].rjust(32, set_first_bit(nodes[i+1][0], 1))
+        new_value = b''.join([left_value, right_value])
+        new_sum = bytes_to_int(nodes[i+1][24:]) + bytes_to_int(nodes[i][24:])
+        new_hash = add_sum_to_hash(Web3.sha3(new_value), new_sum)
+        # print('Left:', encode_hex(left_value), 'parent:', encode_hex(new_hash))
+        # print('Right:', encode_hex(right_value), 'parent:', encode_hex(new_hash))
+        db.put(new_hash, new_value)
+        remaining_nodes.append(new_hash)
+    return construct_tree(db, remaining_nodes)
 
 def merklize(db, nodes):
     if len(nodes) == 1:

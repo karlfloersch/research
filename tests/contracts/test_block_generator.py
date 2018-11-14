@@ -1,4 +1,4 @@
-from plasmalib.block_generator import create_tx_buckets, EphemDB
+from plasmalib.block_generator import create_tx_buckets, EphemDB, construct_tree
 from plasmalib.utils import Msg, Tx, Swap
 from random import randrange
 import time
@@ -40,7 +40,7 @@ def generate_txs(num_txs, num_swaps, total_deposits, max_range, accts):
         num_swaps -= swap_count
     for i in range(num_txs):
         # Generate normal txs
-        start = randrange(total_deposits-1)
+        start = randrange(total_deposits - max_range)
         offset = randrange(1, max_range)
         sender = accts[randrange(10)]
         recipient = accts[randrange(10)]
@@ -53,10 +53,15 @@ def test_everything(w3, tester, accts):
     db = EphemDB()
     # Generate transactions
     total_deposits = 10000
-    txs = generate_txs(1000, 500, total_deposits, 10, accts)
+    total_txs = 10000
+    txs = generate_txs(total_txs, 500, total_deposits, 10, accts)
 
     start_time = time.time()
     buckets = create_tx_buckets(db, txs)
+    root_hash = construct_tree(db, [bucket.tx_merkle_tree_root_hash for bucket in buckets])
+    print('Committing block root hash:', root_hash)
+    print(int.from_bytes(root_hash[24:], byteorder='big'))
+    print('Processed', total_txs, 'transactions')
 
     # print('~~~\nTxs:')
     # print([(tx.start, tx.offset, tx.is_swap) for tx in txs])
