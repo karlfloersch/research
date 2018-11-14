@@ -1,4 +1,4 @@
-
+import json
 from web3 import Web3
 from web3.contract import ConciseContract
 from eth_tester import EthereumTester, PyEVMBackend
@@ -36,36 +36,65 @@ class Msg:
             to_bytes32(self.offset)
         )
 
+class Swap:
+    def __init__(self, msgs):
+        self.msgs = msgs
+        self.raw_hashes = b''
+        for m in msgs:
+            self.raw_hashes += m.h
+        self.h = Web3.sha3(
+            self.raw_hashes
+        )
+
 class Tx:
-    def __init__(self, msg, signer):
+    def __init__(self, msg, swap, signer):
         self.msg = msg
+        self.sender = msg.sender
+        self.recipient = msg.recipient
+        self.start = msg.start
+        self.offset = msg.offset
+        if swap is not None:
+            assert msg.h in swap.raw_hashes
+            self.full_msg_hash = swap.h
+            self.is_swap = True
+        else:
+            self.full_msg_hash = msg.h
+            self.is_swap = False
         # self.sig = signer(msg.h)
-        sig = signer(msg.h)
+        sig = signer(self.full_msg_hash)
         self.sigv = sig.v
         self.sigr = sig.r
         self.sigs = sig.s
         self.h = Web3.sha3(
-            addr_to_bytes(self.msg.sender) +
-            addr_to_bytes(self.msg.recipient) +
-            to_bytes32(self.msg.start) +
-            to_bytes32(self.msg.offset) +
+            self.full_msg_hash +
             to_bytes32(self.sigv) +
             to_bytes32(self.sigr) +
             to_bytes32(self.sigs)
         )
 
+    def plaintext(self):
+        return addr_to_bytes(self.sender) + addr_to_bytes(self.recipient) + to_bytes32(self.start) + to_bytes32(self.offset) + \
+            self.full_msg_hash + self.h + to_bytes32(self.sigv) + to_bytes32(self.sigr) + to_bytes32(self.sigs)
+
     # def json(self):
-        # return json.dumps(self, default = lambda o: o.__dict__)
+    #     return json.dumps(self, default=lambda o: o.__dict__)
 
 class NullTx:
-    def __init__(self):
-        self.h = HexBytes(b'\x00' * 32)
+    def __init__(self, start, offset):
+        self.sender = '0xdead'
+        self.recipient = '0xdead'
+        self.start = start
+        self.offset = offset
+        self.is_swap = False
+        self.h = Web3.sha3(
+            addr_to_bytes(self.sender) +
+            addr_to_bytes(self.recipient) +
+            to_bytes32(self.start) +
+            to_bytes32(self.offset)
+        )
 
-# class Sig:
-    # def __init__(self, v, r, s):
-        # self.v = v
-        # self.r = r
-        # self.s = s
+    def plaintext(self):
+        return b'null'
 
 def pairs(l):
     return [(l[i], l[i + 1]) for i in range(0, len(l), 2)]
