@@ -53,7 +53,7 @@ def test_everything(w3, tester, accts):
     db = EphemDB()
     # Generate transactions
     total_deposits = 10000
-    total_txs = 10000
+    total_txs = 1000
     txs = generate_txs(total_txs, 500, total_deposits, 10, accts)
 
     start_time = time.time()
@@ -62,13 +62,13 @@ def test_everything(w3, tester, accts):
     print('Committing block root hash:', root_hash)
     print(int.from_bytes(root_hash[24:], byteorder='big'))
     print('Processed', total_txs, 'transactions')
+    print("--- in %s seconds ---" % (time.time() - start_time))
 
-    # print('~~~\nTxs:')
-    # print([(tx.start, tx.offset, tx.is_swap) for tx in txs])
-    # print('~~~\nBuckets:')
+    print('~~~\nTxs:')
+    print([(tx.start, tx.offset, tx.is_swap) for tx in txs])
+    print('~~~\nBuckets:')
 
-    # for bucket in buckets:
-    #     print(bucket[0], [(tx.start, tx.offset, tx.sender, tx.is_swap) for tx in bucket[1]])
+    for bucket in buckets:
+        print(bucket.start, [(tx.start, tx.offset, tx.is_swap) for tx in bucket.txs])
 
-    print("--- %s seconds ---" % (time.time() - start_time))
     print('done')
