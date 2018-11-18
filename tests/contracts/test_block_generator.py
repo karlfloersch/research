@@ -1,4 +1,5 @@
 from plasmalib.block_generator import create_tx_buckets, EphemDB, construct_tree
+from plasmalib.transaction_validator import add_tx, subtract_range, add_range
 from plasmalib.utils import Msg, Tx, Swap
 from random import randrange
 import time
@@ -48,8 +49,55 @@ def generate_txs(num_txs, num_swaps, total_deposits, max_range, accts):
         txs.append(Tx(msg, None, mock_signer))
     return txs
 
+def test_subtract_range():
+    # Test subtracting a bunch of ranges
+    range_list = [0, 3, 6, 10, 15, 17, 18, 18]
+    subtract_range(range_list, 0, 3)
+    assert range_list == [6, 10, 15, 17, 18, 18]
+    subtract_range(range_list, 18, 18)
+    assert range_list == [6, 10, 15, 17]
+    subtract_range(range_list, 7, 7)
+    assert range_list == [15, 17, 6, 6, 8, 10]
+    subtract_range(range_list, 15, 17)
+    assert range_list == [6, 6, 8, 10]
+    subtract_range(range_list, 6, 6)
+    assert range_list == [8, 10]
+    subtract_range(range_list, 9, 9)
+    assert range_list == [8, 8, 10, 10]
+    subtract_range(range_list, 8, 8)
+    assert range_list == [10, 10]
+    subtract_range(range_list, 10, 10)
+    assert range_list == []
 
-def test_everything(w3, tester, accts):
+def test_add_range():
+    # Test adding a bunch of ranges
+    range_list = [0, 1, 6, 10, 15, 17, 20, 20]
+    add_range(range_list, 5, 5)
+    assert range_list == [0, 1, 15, 17, 20, 20, 5, 10]
+    add_range(range_list, 3, 3)
+    assert range_list == [0, 1, 15, 17, 20, 20, 5, 10, 3, 3]
+    add_range(range_list, 2, 2)
+    assert range_list == [15, 17, 20, 20, 5, 10, 0, 3]
+    add_range(range_list, 4, 4)
+    assert range_list == [15, 17, 20, 20, 0, 10]
+    add_range(range_list, 18, 19)
+    assert range_list == [0, 10, 15, 20]
+    add_range(range_list, 11, 14)
+    assert range_list == [0, 20]
+
+def test_tx_validator(w3, tester, accts):
+    db = EphemDB()
+    db.put(accts[0].address, [0, 3, 7, 8, 10, 11])
+    db.put(accts[1].address, [4, 6, 9, 9, 12, 15])
+    valid_tx = Tx(Msg(accts[0].address, accts[1].address, 10, 2), None, mock_signer)
+    print('done')
+    print(db.get(accts[0].address))
+    print(db.get(accts[1].address))
+    print(add_tx(db, valid_tx))
+    print(db.get(accts[0].address))
+    print(db.get(accts[1].address))
+
+def test_block_generator(w3, tester, accts):
     db = EphemDB()
     # Generate transactions
     total_deposits = 10000
@@ -59,10 +107,6 @@ def test_everything(w3, tester, accts):
     start_time = time.time()
     buckets = create_tx_buckets(db, txs)
     root_hash = construct_tree(db, [bucket.tx_merkle_tree_root_hash for bucket in buckets])
-    print('Committing block root hash:', root_hash)
-    print(int.from_bytes(root_hash[24:], byteorder='big'))
-    print('Processed', total_txs, 'transactions')
-    print("--- in %s seconds ---" % (time.time() - start_time))
 
     print('~~~\nTxs:')
     print([(tx.start, tx.offset, tx.is_swap) for tx in txs])
@@ -70,5 +114,9 @@ def test_everything(w3, tester, accts):
 
     for bucket in buckets:
         print(bucket.start, [(tx.start, tx.offset, tx.is_swap) for tx in bucket.txs])
+    print('Committing block root hash:', root_hash)
+    print(int.from_bytes(root_hash[24:], byteorder='big'))
+    print('Processed', total_txs, 'transactions')
+    print("--- in %s seconds ---" % (time.time() - start_time))
 
     print('done')

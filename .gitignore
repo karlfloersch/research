@@ -2,3 +2,4 @@ venv
 vyper
 *pycache*
 *.egg-info
+*.swp

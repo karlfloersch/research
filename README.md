@@ -57,3 +57,12 @@ transaction format:
 - implement plasma guard
 - concise exclusion proofs with RSA accumulators
 - proper merkle sum tree
+
+
+
+# Plan
+- Dynamodb for DB
+- Get lock with lambda for address->owned ranges. Atomic read / update.
+- Once updated, append transaction to the list of transactions
+- A block is generated based on the `START_TX_POS` and `END_TX_POS` which are the indexes
+of the transactions in our `TX_LIST`. That way there is no blocking needed.
