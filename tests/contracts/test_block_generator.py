@@ -1,6 +1,6 @@
 from plasmalib.block_generator import create_tx_buckets, EphemDB, construct_tree
 from plasmalib.transaction_validator import add_tx, subtract_range, add_range
-from plasmalib.utils import Msg, Tx, Swap
+from plasmalib.utils import Msg, Tx, Swap, Deposit
 from random import randrange
 import time
 
@@ -9,6 +9,32 @@ class MockSig:
         self.v = 0
         self.r = 0
         self.s = 0
+
+class TxRange:
+    def __init__(self, start, offset):
+        self.start = start
+        self.offset = offset
+
+class TestNode:
+    def __init__(self, account, friend_list, msg_queue):
+        self.account = account
+        self.friend_list = friend_list
+        self.msg_queue = msg_queue
+        self.ranges = []
+
+    def process_message(self, msg):
+        print('processing message')
+
+    def deposit(self, amount):
+        self.msg_queue.add_msg(Deposit(self.account, amount))
+
+    def add_random_tx(self):
+        tx_range = self.ranges[randrange(len(self.ranges))]
+        raw_send = Msg(self.account.address, self.friend_list[randrange(len(self.friend_list))].address, tx_range.start, tx_range.offset)
+        tx = Tx(raw_send, None, mock_signer)
+        self.ranges.remove(tx_range)
+        self.msg_queue.add_msg(tx)
+
 
 def mock_signer(msg):
     return MockSig()

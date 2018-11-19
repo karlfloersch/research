@@ -46,6 +46,12 @@ class Swap:
             self.raw_hashes
         )
 
+class Deposit:
+    # TODO: Add multi-asset support
+    def __init__(self, owner, amount):
+        self.owner = owner
+        self.offset = amount
+
 class Tx:
     def __init__(self, msg, swap, signer):
         self.msg = msg

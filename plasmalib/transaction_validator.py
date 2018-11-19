@@ -61,6 +61,11 @@ def add_tx(db, tx):
     db.put(tx.recipient, recipient_ranges)
     return True
 
+def add_deposit(db, owner, amount, total_deposits):
+    owner_ranges = db.get(owner)
+    owner_ranges += [total_deposits - amount, total_deposits - 1]
+    db.put(owner, owner_ranges)
+
 def validate_tx_sig(tx):
     # TODO: Actually verify the signature
     return True
