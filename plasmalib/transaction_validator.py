@@ -6,7 +6,8 @@ def subtract_range(range_list, start, end):
         if r_start <= start and end <= r_end:
             affected_range = i
             break
-    assert affected_range is not None
+    if affected_range is None:
+        return False
     # Remove the effected range
     del range_list[i:i + 2]
     # Create new sub-ranges based on what we deleted
@@ -14,6 +15,7 @@ def subtract_range(range_list, start, end):
         range_list += [r_start, start - 1]
     if r_end > end:
         range_list += [end + 1, r_end]
+    return True
 
 
 def add_range(range_list, start, end):
@@ -52,19 +54,28 @@ def add_tx(db, tx):
     tx_start = tx.start
     tx_end = tx.start + tx.offset - 1
     # Subtract ranges from sender range list and store
-    subtract_range(sender_ranges, tx_start, tx_end)
+    if not subtract_range(sender_ranges, tx_start, tx_end):
+        return False
     db.put(tx.sender, sender_ranges)
     # After having deleted the sender ranges,
     # Add ranges to recipient range list and store
     recipient_ranges = db.get(tx.recipient)
     add_range(recipient_ranges, tx_start, tx_end)
     db.put(tx.recipient, recipient_ranges)
-    return True
+    return sender_ranges
 
-def add_deposit(db, owner, amount, total_deposits):
+def add_deposit(db, owner, amount):
+    total_deposits = db.get('total_deposits')
+    if total_deposits is None:
+        total_deposits = 0
     owner_ranges = db.get(owner)
-    owner_ranges += [total_deposits - amount, total_deposits - 1]
+    if owner_ranges is None:
+        owner_ranges = []
+    owner_ranges += [total_deposits, total_deposits + amount - 1]
+    total_deposits += amount
     db.put(owner, owner_ranges)
+    db.put('total_deposits', total_deposits)
+    return owner_ranges
 
 def validate_tx_sig(tx):
     # TODO: Actually verify the signature

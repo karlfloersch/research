@@ -37,8 +37,9 @@ def accts(w3):
     seed()
     STARTING_VALUE = Web3.toWei(100, 'ether')
     PASSPHRASE = 'not a real passphrase'
-    accts = [Account.create(randrange(10**32)) for i in range(10)]
-    for i in range(10):
+    num_accts = 10
+    accts = [Account.create(randrange(10**32)) for i in range(num_accts)]
+    for i in range(len(accts)):
         w3.eth.sendTransaction({'to': accts[i].address, 'value': STARTING_VALUE})
         w3.personal.importRawKey(accts[i].privateKey, PASSPHRASE)
         w3.personal.unlockAccount(accts[i].address, PASSPHRASE)

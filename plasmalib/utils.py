@@ -53,6 +53,7 @@ class Deposit:
         self.offset = amount
 
 class Tx:
+    # TODO: Add tx timeout to avoid free option problem
     def __init__(self, msg, swap, signer):
         self.msg = msg
         self.sender = msg.sender
