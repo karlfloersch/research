@@ -3,6 +3,7 @@ from plasmalib.transaction_validator import add_tx, add_deposit, subtract_range,
 from plasmalib.utils import Msg, Tx, Swap
 from random import randrange
 import time
+import os
 
 class MockSig:
     def __init__(self):
@@ -30,18 +31,20 @@ class TestNode:
             print('Oh no!')
             return
 
-    def add_random_tx(self, msg_queue):
+    def add_random_tx(self, msg_queue, send_full_range):
         ranges = self.db.get(self.account.address)
         if len(ranges) == 0:
             return 'No money!'
         tx_range_index = randrange(len(ranges)//2)*2
-        if ranges[tx_range_index] == ranges[tx_range_index + 1]:
+        if ranges[tx_range_index] == ranges[tx_range_index + 1] or send_full_range:
             start = ranges[tx_range_index]
         else:
             start = randrange(ranges[tx_range_index], ranges[tx_range_index + 1])
         max_offset = ranges[tx_range_index + 1] - start + 1
         if max_offset == 1:
             offset = 1
+        elif send_full_range:
+            offset = max_offset
         else:
             offset = randrange(1, max_offset)
         raw_send = Msg(self.account.address, self.friend_list[randrange(len(self.friend_list))].address, start, offset)
@@ -88,14 +91,21 @@ def generate_txs(num_txs, num_swaps, total_deposits, max_range, accts):
         txs.append(Tx(msg, None, mock_signer))
     return txs
 
-def process_tx(db, tx):
-    add_tx_result = add_tx(db, tx)
+def process_tx(db, write_file, tx):
+    add_tx_result = add_tx(db, write_file, tx)
     if add_tx_result is False:
         return tx.msg.sender, 'FAILED'
     return tx.msg.sender, add_tx_result
 
 # def add_deposit(db, owner, amount, total_deposits):
-def test_tx_validator(w3, tester, accts):
+def test_tx_validator(w3, tester, mock_accts):
+    file_path = os.path.dirname(os.path.realpath(__file__)) + '/test.txt'
+    print('yoooo')
+    test_write = open(file_path, 'w')
+    print(file_path)
+
+    accts = mock_accts
+    print([a.address for a in accts])
     print('starting...')
     db = EphemDB()
     nodes = []
@@ -115,17 +125,18 @@ def test_tx_validator(w3, tester, accts):
     print([(n.account.address, n.ranges) for n in nodes])
     responses = {}
     start_time = time.time()
-    for i in range(10000):
+    for i in range(1000):
         txs = []
         for n in nodes:
             n.handle_response(responses)
-            n.add_random_tx(txs)
+            n.add_random_tx(txs, False)
         responses = {}
         for t in txs:
-            recipient, response = process_tx(db, t)
+            recipient, response = process_tx(db, test_write, t)
             responses[recipient] = response
     print("--- in %s seconds ---" % (time.time() - start_time))
-    print('\nwhat\n')
+    test_write.close()
+    print('\n\n')
     print([(n.account.address, n.ranges) for n in nodes])
 
 

@@ -45,6 +45,16 @@ def accts(w3):
         w3.personal.unlockAccount(accts[i].address, PASSPHRASE)
     return accts
 
+class MockAccount:
+    def __init__(self, address):
+        self.address = address
+
+@pytest.fixture
+def mock_accts(w3):
+    num_accts = 100
+    accts = [MockAccount(Web3.toHex(Web3.sha3(i))[:44]) for i in range(num_accts)]
+    return accts
+
 @pytest.fixture
 def pp(w3):
     wd = os.path.dirname(os.path.realpath(__file__))

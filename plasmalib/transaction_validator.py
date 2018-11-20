@@ -29,7 +29,7 @@ def add_range(range_list, start, end):
     left_range = None
     right_range = None
     insertion_point = bisect.bisect_left(range_list, start)
-    if range_list[insertion_point - 1] == start - 1:
+    if insertion_point > 0 and range_list[insertion_point - 1] == start - 1:
         left_range = insertion_point - 2
     if insertion_point < len(range_list) and range_list[insertion_point] == end + 1:
         right_range = insertion_point
@@ -49,7 +49,7 @@ def add_range(range_list, start, end):
         del range_list[right_range:right_range + 2]
     range_list[insertion_point:insertion_point] = [start, end]
 
-def add_tx(db, tx):
+def add_tx(db, write_file, tx):
     # Now make sure the range is owned by the sender
     sender_ranges = db.get(tx.sender)
     tx_start = tx.start
@@ -63,6 +63,7 @@ def add_tx(db, tx):
     recipient_ranges = db.get(tx.recipient)
     add_range(recipient_ranges, tx_start, tx_end)
     db.put(tx.recipient, recipient_ranges)
+    write_file.write(str(tx.plaintext()))
     return sender_ranges
 
 def add_deposit(db, owner, amount):
