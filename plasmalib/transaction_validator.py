@@ -1,3 +1,5 @@
+import bisect
+
 def subtract_range(range_list, start, end):
     affected_range = None
     for i in range(0, len(range_list), 2):
@@ -12,9 +14,13 @@ def subtract_range(range_list, start, end):
     del range_list[i:i + 2]
     # Create new sub-ranges based on what we deleted
     if r_start < start:
-        range_list += [r_start, start - 1]
+        # range_list += [r_start, start - 1]
+        insertion_point = bisect.bisect_left(range_list, r_start)
+        range_list[insertion_point:insertion_point] = [r_start, start - 1]
     if r_end > end:
-        range_list += [end + 1, r_end]
+        # range_list += [end + 1, r_end]
+        insertion_point = bisect.bisect_left(range_list, end + 1)
+        range_list[insertion_point:insertion_point] = [end + 1, r_end]
     return True
 
 
@@ -22,11 +28,11 @@ def add_range(range_list, start, end):
     # Find left_range (a range which ends at the start of our tx) and right_range (a range which starts at the end of our tx)
     left_range = None
     right_range = None
-    for i in range(0, len(range_list), 2):
-        if range_list[i+1] == start - 1:
-            left_range = i
-        if range_list[i] == end + 1:
-            right_range = i
+    insertion_point = bisect.bisect_left(range_list, start)
+    if range_list[insertion_point - 1] == start - 1:
+        left_range = insertion_point - 2
+    if insertion_point < len(range_list) and range_list[insertion_point] == end + 1:
+        right_range = insertion_point
     # Set the start and end of our new range based on the deleted ranges
     if left_range is not None:
         start = range_list[left_range]
@@ -34,19 +40,14 @@ def add_range(range_list, start, end):
         end = range_list[right_range + 1]
     # Delete the left_range and right_range if we found them
     if left_range is not None and right_range is not None:
-        # Delete them in such a way that the first delete does not effect the index of the second delete
-        if left_range > right_range:
-            del range_list[left_range:left_range + 2]
-            del range_list[right_range:right_range + 2]
-        else:
-            del range_list[right_range:right_range + 2]
-            del range_list[left_range:left_range + 2]
+        del range_list[left_range + 1:right_range + 1]
+        return
     elif left_range is not None:
         del range_list[left_range:left_range + 2]
+        insertion_point -= 2
     elif right_range is not None:
         del range_list[right_range:right_range + 2]
-    range_list += [start, end]
-
+    range_list[insertion_point:insertion_point] = [start, end]
 
 def add_tx(db, tx):
     # Now make sure the range is owned by the sender

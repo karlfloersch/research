@@ -115,7 +115,7 @@ def test_tx_validator(w3, tester, accts):
     print([(n.account.address, n.ranges) for n in nodes])
     responses = {}
     start_time = time.time()
-    for i in range(1000):
+    for i in range(10000):
         txs = []
         for n in nodes:
             n.handle_response(responses)
@@ -147,7 +147,7 @@ def test_subtract_range():
     subtract_range(range_list, 18, 18)
     assert range_list == [6, 10, 15, 17]
     subtract_range(range_list, 7, 7)
-    assert range_list == [15, 17, 6, 6, 8, 10]
+    assert range_list == [6, 6, 8, 10, 15, 17]
     subtract_range(range_list, 15, 17)
     assert range_list == [6, 6, 8, 10]
     subtract_range(range_list, 6, 6)
@@ -163,13 +163,13 @@ def test_add_range():
     # Test adding a bunch of ranges
     range_list = [0, 1, 6, 10, 15, 17, 20, 20]
     add_range(range_list, 5, 5)
-    assert range_list == [0, 1, 15, 17, 20, 20, 5, 10]
+    assert range_list == [0, 1, 5, 10, 15, 17, 20, 20]
     add_range(range_list, 3, 3)
-    assert range_list == [0, 1, 15, 17, 20, 20, 5, 10, 3, 3]
+    assert range_list == [0, 1, 3, 3, 5, 10, 15, 17, 20, 20]
     add_range(range_list, 2, 2)
-    assert range_list == [15, 17, 20, 20, 5, 10, 0, 3]
+    assert range_list == [0, 3, 5, 10, 15, 17, 20, 20]
     add_range(range_list, 4, 4)
-    assert range_list == [15, 17, 20, 20, 0, 10]
+    assert range_list == [0, 10, 15, 17, 20, 20]
     add_range(range_list, 18, 19)
     assert range_list == [0, 10, 15, 20]
     add_range(range_list, 11, 14)
