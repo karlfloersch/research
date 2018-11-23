@@ -138,7 +138,7 @@ def test_tx_validator(w3, tester, mock_accts):
     responses = {}
     start_time = time.time()
     # We have 100 accounts
-    total_txs = 1000000
+    total_txs = 10000
     for i in range(total_txs // len(mock_accts)):
         txs = []
         for n in nodes:

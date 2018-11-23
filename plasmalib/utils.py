@@ -1,4 +1,3 @@
-import json
 from web3 import Web3
 from web3.contract import ConciseContract
 from eth_tester import EthereumTester, PyEVMBackend
@@ -6,6 +5,7 @@ from vyper import compiler
 from math import floor, ceil, log
 from hexbytes import HexBytes
 from plasmalib.constants import *
+from eth_utils import encode_hex as encode_hex_0x
 # import json
 
 from pprint import PrettyPrinter
@@ -140,6 +140,14 @@ def addr_to_bytes(addr):
 
 def to_bytes32(i):
     return i.to_bytes(32, byteorder='big')
+
+def bytes_to_int(value):
+    return int.from_bytes(value, byteorder='big')
+
+def encode_hex(n):
+    if isinstance(n, str):
+        return encode_hex(n.encode('ascii'))
+    return encode_hex_0x(n)[2:]
 
 def contract_factory(w3, source):
     bytecode = '0x' + compiler.compile(source).hex()

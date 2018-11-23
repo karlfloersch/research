@@ -1,5 +1,4 @@
-from plasmalib.utils import NullTx
-from eth_utils import encode_hex as encode_hex_0x
+from plasmalib.utils import NullTx, bytes_to_int
 from eth_utils import int_to_big_endian
 from web3 import Web3
 
@@ -59,19 +58,7 @@ def create_tx_buckets(db, txs):
             buckets.append(TxBucket(db, i, bucket_offset, [NullTx(i, list_of_starts_and_ends[idx+1] - i)]))
         else:
             buckets.append(TxBucket(db, i, bucket_offset, active_txs))
-        # print('starts:', [tx.start for tx in active_txs])
-        # print('ends:', [tx.start + tx.offset for tx in active_txs])
-        # print('current value:', i)
-        # print("~~~~")
     return buckets
-
-def bytes_to_int(value):
-    return int.from_bytes(value, byteorder='big')
-
-def encode_hex(n):
-    if isinstance(n, str):
-        return encode_hex(n.encode('ascii'))
-    return encode_hex_0x(n)[2:]
 
 def set_first_bit(byte_value, one_or_zero):
     if one_or_zero == 0:
@@ -92,8 +79,6 @@ def construct_tree(db, nodes):
         new_value = b''.join([left_value, right_value])
         new_sum = bytes_to_int(nodes[i+1][24:]) + bytes_to_int(nodes[i][24:])
         new_hash = add_sum_to_hash(Web3.sha3(new_value), new_sum)
-        # print('Left:', encode_hex(left_value), 'parent:', encode_hex(new_hash))
-        # print('Right:', encode_hex(right_value), 'parent:', encode_hex(new_hash))
         db.put(new_hash, new_value)
         remaining_nodes.append(new_hash)
     return construct_tree(db, remaining_nodes)
