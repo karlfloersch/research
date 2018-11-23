@@ -36,6 +36,10 @@ class Msg:
             to_bytes32(self.offset)
         )
 
+    def plaintext(self):
+        return addr_to_bytes(self.sender) + addr_to_bytes(self.recipient) + to_bytes32(self.start) + to_bytes32(self.offset) + self.h
+
+
 class Swap:
     def __init__(self, msgs):
         self.msgs = msgs
@@ -60,6 +64,7 @@ class Tx:
         self.recipient = msg.recipient
         self.start = msg.start
         self.offset = msg.offset
+        self.swap = swap
         if swap is not None:
             assert msg.h in swap.raw_hashes
             self.full_msg_hash = swap.h
@@ -80,8 +85,14 @@ class Tx:
         )
 
     def plaintext(self):
-        return addr_to_bytes(self.sender) + addr_to_bytes(self.recipient) + to_bytes32(self.start) + to_bytes32(self.offset) + \
-            self.full_msg_hash + self.h + to_bytes32(self.sigv) + to_bytes32(self.sigr) + to_bytes32(self.sigs)
+        plaintext = b''
+        if self.swap is not None:
+            for msg in self.swap.msgs:
+                plaintext += msg.plaintext()
+        else:
+            plaintext += self.msg.plaintext()
+        plaintext += self.h + to_bytes32(self.sigv) + to_bytes32(self.sigr) + to_bytes32(self.sigs)
+        return plaintext
 
     # def json(self):
     #     return json.dumps(self, default=lambda o: o.__dict__)
