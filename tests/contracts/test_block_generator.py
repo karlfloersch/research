@@ -2,6 +2,7 @@ from plasmalib.block_generator import create_tx_buckets, EphemDB, construct_tree
 from plasmalib.transaction_validator import add_tx, add_deposit, subtract_range, add_range
 from plasmalib.utils import Msg, Tx, Swap
 from random import randrange
+import pickle
 import time
 import os
 
@@ -92,17 +93,28 @@ def generate_txs(num_txs, num_swaps, total_deposits, max_range, accts):
     return txs
 
 def process_tx(db, write_file, tx):
-    add_tx_result = add_tx(db, write_file, tx)
+    add_tx_result = add_tx(db, tx)
     if add_tx_result is False:
         return tx.msg.sender, 'FAILED'
+    write_file.write(str(tx.plaintext()) + '\n')
     return tx.msg.sender, add_tx_result
+
+# def test_tx_pickle(accts):
+#     total_deposits = 1000
+#     max_range = 30
+#     start = randrange(total_deposits - max_range)
+#     offset = randrange(1, max_range)
+#     sender = accts[randrange(10)]
+#     recipient = accts[randrange(10)]
+#     msg = Msg(sender.address, recipient.address, start, offset)
+#     tx = Tx(msg, None, mock_signer)
+#     print(tx.plaintext())
+
 
 # def add_deposit(db, owner, amount, total_deposits):
 def test_tx_validator(w3, tester, mock_accts):
     file_path = os.path.dirname(os.path.realpath(__file__)) + '/test.txt'
-    print('yoooo')
     test_write = open(file_path, 'w')
-    print(file_path)
 
     accts = mock_accts
     print([a.address for a in accts])
@@ -125,7 +137,9 @@ def test_tx_validator(w3, tester, mock_accts):
     print([(n.account.address, n.ranges) for n in nodes])
     responses = {}
     start_time = time.time()
-    for i in range(1000):
+    # We have 100 accounts
+    total_txs = 1000000
+    for i in range(total_txs // len(mock_accts)):
         txs = []
         for n in nodes:
             n.handle_response(responses)
@@ -134,10 +148,12 @@ def test_tx_validator(w3, tester, mock_accts):
         for t in txs:
             recipient, response = process_tx(db, test_write, t)
             responses[recipient] = response
-    print("--- in %s seconds ---" % (time.time() - start_time))
     test_write.close()
+    end_time = time.time() - start_time
     print('\n\n')
     print([(n.account.address, n.ranges) for n in nodes])
+    print('Processed', total_txs, 'transactions')
+    print("--- in %s seconds ---" % (end_time))
 
 
     # db.put(accts[0].address, [0, 3, 7, 8, 10, 11])
@@ -186,16 +202,17 @@ def test_add_range():
     add_range(range_list, 11, 14)
     assert range_list == [0, 20]
 
-def test_block_generator(w3, tester, accts):
+def test_generate_block(w3, tester, accts):
     db = EphemDB()
     # Generate transactions
-    total_deposits = 10000
+    total_deposits = 1000
     total_txs = 1000
     txs = generate_txs(total_txs, 500, total_deposits, 10, accts)
 
     start_time = time.time()
     buckets = create_tx_buckets(db, txs)
     root_hash = construct_tree(db, [bucket.tx_merkle_tree_root_hash for bucket in buckets])
+    end_time = time.time() - start_time
 
     print('~~~\nTxs:')
     print([(tx.start, tx.offset, tx.is_swap) for tx in txs])
@@ -206,6 +223,6 @@ def test_block_generator(w3, tester, accts):
     print('Committing block root hash:', root_hash)
     print(int.from_bytes(root_hash[24:], byteorder='big'))
     print('Processed', total_txs, 'transactions')
-    print("--- in %s seconds ---" % (time.time() - start_time))
+    print("--- in %s seconds ---" % (end_time))
 
     print('done')
