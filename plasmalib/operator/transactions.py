@@ -1,5 +1,5 @@
 import rlp
-from rlp.sedes import big_endian_int, List, CountableList
+from rlp.sedes import big_endian_int, BigEndianInt, List, CountableList
 from eth_hash.auto import keccak
 from eth.rlp.sedes import address
 
@@ -8,8 +8,8 @@ tx_fields = [
     ('recipient', address),
     ('start', big_endian_int),
     ('offset', big_endian_int),
-    ('token_id', big_endian_int),
     ('parent_start', big_endian_int),
+    ('token_id', BigEndianInt(8)),
 ]
 sig_fields = [
     ('v', big_endian_int),
