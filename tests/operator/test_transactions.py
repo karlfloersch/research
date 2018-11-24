@@ -1,6 +1,6 @@
 import rlp
 from web3 import Web3
-from plasmalib.operator.transactions import Transaction, Signature, MultiTx
+from plasmalib.operator.transactions import Transaction, get_null_tx, Signature, MultiTx
 
 def test_transactions():
     sender = Web3.sha3(1)[2:22]
@@ -18,3 +18,6 @@ def test_transactions():
     print('~~~~')
     print(multi_tx.hash)
     print(tx1.hash)
+    print('~~~~')
+    null_tx = get_null_tx(300, 300, 250)
+    print(rlp.decode(rlp.encode(null_tx), Transaction))

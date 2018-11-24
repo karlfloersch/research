@@ -26,6 +26,10 @@ class Transaction(rlp.Serializable):
         return keccak(rlp.encode(self))
 
 
+def get_null_tx(start, offset, token_id):
+    return Transaction(b'\00'*20, b'\00'*20, start, offset, 0, token_id)
+
+
 class Signature(rlp.Serializable):
     fields = sig_fields
 
