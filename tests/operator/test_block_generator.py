@@ -12,11 +12,6 @@ class MockSig:
         self.r = 0
         self.s = 0
 
-class TxRange:
-    def __init__(self, start, offset):
-        self.start = start
-        self.offset = offset
-
 class TestNode:
     def __init__(self, db, account, friend_list):
         self.db = db
