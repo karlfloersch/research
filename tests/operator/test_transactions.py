@@ -1,23 +1,25 @@
 import rlp
 from web3 import Web3
-from plasmalib.operator.transactions import Transaction, get_null_tx, Signature, MultiTx
+from plasmalib.operator.transactions import TransferRecord, get_null_tx, Signature, Transaction
 
 def test_transactions():
     sender = Web3.sha3(1)[2:22]
     recipient = Web3.sha3(2)[2:22]
-    tx1 = Transaction(sender, recipient, 300, 300, 1, 250)
-    tx2 = Transaction(recipient, sender, 300, 300, 1, 250)
+    transfer1 = TransferRecord(sender, recipient, 300, 300, 1, 250)
+    transfer2 = TransferRecord(recipient, sender, 300, 300, 1, 250)
     sig1 = Signature(0, 0, 0)
     sig2 = Signature(0, 0, 0)
-    multi_tx = MultiTx([tx1.copy(), tx2.copy()], [sig1.copy(), sig2.copy()])
+    tx = Transaction([transfer1.copy(), transfer2.copy()], [sig1.copy(), sig2.copy()])
 
-    print(rlp.decode(rlp.encode(tx1), Transaction))
-    print(rlp.decode(rlp.encode(multi_tx), MultiTx))
+    print(rlp.decode(rlp.encode(transfer1), TransferRecord))
+    print(rlp.decode(rlp.encode(tx), Transaction))
     print('~~~~')
-    print(rlp.encode(multi_tx))
+    print(rlp.encode(tx))
     print('~~~~')
-    print(multi_tx.hash)
-    print(tx1.hash)
+    print(tx.hash)
+    print(transfer1.hash)
     print('~~~~')
     null_tx = get_null_tx(300, 300, 250)
-    print(rlp.decode(rlp.encode(null_tx), Transaction))
+    print(rlp.decode(rlp.encode(null_tx), TransferRecord))
+    print('~~~~')
+    print(tx.transfers_hash)
