@@ -20,6 +20,7 @@ transfer_fields = [
     ('offset', is_bytes32_int),
     ('token_id', is_bytes8_int),
     ('max_block', is_bytes32_int),
+    ('nonce', is_bytes8_int),
     ('prime', is_bytes8_int),
 ]
 sig_fields = [
@@ -143,6 +144,7 @@ class TransferRecord(SimpleSerializableElement):
         ('offset', is_bytes32_int),
         ('token_id', is_bytes8_int),
         ('max_block', is_bytes32_int),
+        ('nonce', is_bytes8_int),
         ('prime', is_bytes8_int),
     ]
 
@@ -163,5 +165,5 @@ class DepositRecord(SimpleSerializableElement):
     fields = [
         ('recipient', Web3.isAddress),
         ('amount', is_bytes32_int),
-        ('token_id', is_bytes8_int)
+        ('token_id', is_bytes8_int),
     ]
