@@ -1,4 +1,5 @@
 import plyvel
+from web3 import Web3
 from eth_utils import (
     int_to_big_endian,
     big_endian_to_int,
@@ -6,20 +7,6 @@ from eth_utils import (
 import time
 import os
 import rlp
-
-
-class EphemDB():
-    def __init__(self, kv=None):
-        self.kv = kv or {}
-
-    def get(self, k):
-        return self.kv.get(k, None)
-
-    def put(self, k, v):
-        self.kv[k] = v
-
-    def delete(self, k):
-        del self.kv[k]
 
 
 class FileLog:
@@ -52,10 +39,38 @@ def int_to_big_endian8(val):
 
 
 class RangeDBEntry:
-    def __init__(self, start, offset, owner):
-        self.start = start
-        self.offset = offset
-        self.owner = owner
+    def __init__(self, owner, start, offset, token_id):
+        # Convert and validate the parameters
+        self.owner, self.start, self.offset, self.token_id = self.get_converted_parameters(owner, start, offset, token_id)
+        # For convenience save the keys which we will use to store the range in the db
+        self.start_lookup_key = self.token_id + self.start
+        self.start_to_offset_key = self.start_lookup_key + b'-1offset'
+        self.start_to_owner_key = self.start_lookup_key + b'-2owner'
+        self.owner_to_nonce_key = self.owner + b'-nonce'
+        self.owner_to_start_key = self.owner + self.token_id + self.start
+        # For convenience save the end
+        self.end = self.token_id + int_to_big_endian32(big_endian_to_int(self.start) + big_endian_to_int(self.offset) - 1) + b'-2owner'
+
+    def get_converted_parameters(self, owner, start, offset, token_id):
+        if type(start) != bytes:
+            start = int_to_big_endian32(start)
+        if type(offset) != bytes:
+            offset = int_to_big_endian32(offset)
+        if type(token_id) != bytes:
+            token_id = int_to_big_endian8(token_id)
+        assert Web3.isAddress(owner)
+        assert len(start) == len(offset) == 32
+        assert len(token_id) == 8
+        return (owner, start, offset, token_id)
+
+    def store_range(self, db):
+        # Put everything into the db
+        if db.get(self.owner_to_nonce_key) is None:
+            # If there's no nonce for the owner, add one
+            db.put(self.owner_to_nonce_key, int_to_big_endian8(0))
+        db.put(self.owner_to_start_key, b'1')
+        db.put(self.start_to_offset_key, self.offset)
+        db.put(self.start_to_owner_key, self.owner)
 
 
 class State:
@@ -73,42 +88,74 @@ class State:
         # Update total deposits
         total_deposits = self.db.get(b'total_deposits-' + int_to_big_endian8(deposit_record.token_id))
         if total_deposits is None:
-            total_deposits = b'\x00'
+            total_deposits = b'\x00'*32
         deposit_start = total_deposits
         total_deposits = int_to_big_endian32(big_endian_to_int(total_deposits) + deposit_record.amount)
-        # Add new deposit to the state and update total deposits
+        # Create a new range entry for the deposit
+        new_db_entry = RangeDBEntry(deposit_record.recipient, deposit_start, deposit_record.amount, deposit_record.token_id)
+        # Begin write batch--data written to DB during write batch is all or nothing
         wb = self.db.write_batch()
-        self.store_deposit(deposit_start, deposit_record)
+        # Store the range
+        new_db_entry.store_range(self.db)
+        # Update total deposits
         self.db.put(b'total_deposits-' + int_to_big_endian8(deposit_record.token_id), total_deposits)
+        # End write batch
         wb.write()
         return True
 
-    def store_deposit(self, start, deposit_record):
-        self.store_range(deposit_record.recipient, start, int_to_big_endian32(deposit_record.amount), int_to_big_endian8(deposit_record.token_id))
-
-    def store_tx(self, tx):
-        self.store_range(tx.recipient, int_to_big_endian32(tx.start), int_to_big_endian32(tx.offset), int_to_big_endian8(tx.token_id))
-
-    def store_range(self, owner, start, offset, token_id):
-        self.db.put(owner + b'-' + token_id + b'-' + start, b'1')
-        self.db.put(token_id + b'-' + start + b'-1offset', offset)
-        self.db.put(token_id + b'-' + start + b'-2owner', owner)
-
     def add_tx(self, tx):
-        # Now make sure the range is owned by the sender
-        tx_lookup = int_to_big_endian8(tx.token_id) + b'-' + int_to_big_endian32(tx.start)
-        if self.db.get(tx_lookup + b'-1') is not None:
-            amount_key, recipient_key, last_tx_key = tx_lookup + b'-1', tx_lookup + b'-2', tx_lookup + b'-3'
+        # Check nonce
+        assert self.db.get(tx.sender + b'-nonce') == int_to_big_endian8(tx.nonce)
+        # Create a db entry for the tx
+        new_db_entry = RangeDBEntry(tx.recipient, tx.start, tx.offset, tx.token_id)
+        # Get affected ranges
+        affected_ranges = self.get_affected_ranges(new_db_entry)
+        print('Affected ranges:', affected_ranges)
+        print('Affected range start pos:', [big_endian_to_int(r[8:40]) for r in affected_ranges])
+        # Check that affected ranges are owned by the sender
+        assert self.validate_range_owner(affected_ranges, tx.sender)
+        # Shorten first range if needed
+        if new_db_entry.start_to_offset_key != affected_ranges[0]:
+            # TODO: Add
+            self.db.put(affected_ranges[0], int_to_big_endian32(tx.start - big_endian_to_int(affected_ranges[0][8:40])))
+            print('setting new end offset to:', tx.start - big_endian_to_int(affected_ranges[0][8:40]))
+            print(affected_ranges[0:2])
+            del affected_ranges[0:2]
+        # Shorten last range if needed
+        if len(affected_ranges) != 0 and new_db_entry.end != affected_ranges[-1]:
+            self.db.put(affected_ranges[-2], int_to_big_endian32(tx.start + tx.offset))
+            print('setting new start to:', tx.start + tx.offset)
+            del affected_ranges[-2:]
+        print('Final Affected range start pos:', [big_endian_to_int(r[8:40]) for r in affected_ranges])
+
+    def delete_ranges(ranges):
+        # TODO: Implement
+        pass
+
+    def validate_range_owner(self, ranges, owner):
+        # for r in ranges[1::2]:
+        #     if self.db.get(r) != owner:
+        #         return False
+        return True
+
+    def get_affected_ranges(self, db_entry):
+        it = self.db.iterator(include_value=False)
+        it.seek(db_entry.start_lookup_key)
+        last_key = next(it)
+        # Check if we need to move the iterator back to the previous range
+        if db_entry.start_to_owner_key < last_key:
+            it.prev()
+            it.prev()
+            it.prev()
         else:
-            it = self.db.iterator(include_value=False)
-            it.seek(tx_lookup)
-            last_tx_key, recipient_key, amount_key = it.prev(), it.prev(), it.prev()
-        print('Keys:', amount_key, recipient_key, last_tx_key)
-        print('Values:', self.db.get(amount_key), self.db.get(recipient_key), self.db.get(last_tx_key))
-        print(last_tx_key[2:])
-        test = last_tx_key.split(b'-')
-        print('this:', big_endian_to_int(test[1]))
-        assert False
+            print('we are equal!')
+        affected_ranges = []
+        last_key = next(it)
+        while db_entry.end >= last_key:
+            # Append to the affected_ranges list
+            affected_ranges.append(last_key)
+            last_key = next(it)
+        return affected_ranges
 
     def delete_ranges(self, it, end):
         db_entry = it.next()
