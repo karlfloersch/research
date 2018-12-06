@@ -1,5 +1,6 @@
 import pytest
 import os
+import time
 
 from web3 import Web3
 from web3.contract import ConciseContract
@@ -7,6 +8,7 @@ from eth_tester import EthereumTester, PyEVMBackend
 from eth_account import Account
 from plasmalib.utils import contract_factory
 from plasmalib.constants import PLASMA_BLOCK_INTERVAL
+from plasmalib.state import State
 from random import randrange, seed
 
 
@@ -52,8 +54,15 @@ class MockAccount:
 @pytest.fixture
 def mock_accts(w3):
     num_accts = 100
-    accts = [MockAccount(Web3.toHex(Web3.sha3(i))[:44]) for i in range(num_accts)]
+    accts = [MockAccount(Web3.toHex(Web3.sha3(i))[:42]) for i in range(num_accts)]
     return accts
+
+@pytest.fixture
+def blank_state(w3):
+    db_path = '/tmp/plasma_prime_blank_test_db/' + str(time.time())
+    file_log_path = '/tmp/plasma_prime_blank_test_tx_log/' + str(time.time())
+    state = State(db_path, file_log_path, backup_timeout=60)
+    return state
 
 @pytest.fixture
 def pp(w3):
