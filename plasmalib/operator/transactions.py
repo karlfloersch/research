@@ -16,9 +16,9 @@ list_len + TransferRecord_1 + ... + TransferRecord_n + list_len + Signature_1 + 
 transfer_fields = [
     ('sender', Web3.isAddress),
     ('recipient', Web3.isAddress),
+    ('token_id', is_bytes8_int),
     ('start', is_bytes32_int),
     ('offset', is_bytes32_int),
-    ('token_id', is_bytes8_int),
     ('max_block', is_bytes32_int),
     ('nonce', is_bytes8_int),
     ('prime', is_bytes8_int),
@@ -60,8 +60,8 @@ def get_fields_total_bytes(fields):
         fields_bytes += get_field_bytes(f[1])
     return fields_bytes
 
-def get_null_tx(start, offset, token_id):
-    return TransferRecord(b'\00'*20, b'\00'*20, start, offset, token_id, 0, 0)
+def get_null_tx(token_id, start, offset):
+    return TransferRecord(b'\00'*20, b'\00'*20, token_id, start, offset, 0, 0)
 
 
 class SimpleSerializableElement:
@@ -140,9 +140,9 @@ class TransferRecord(SimpleSerializableElement):
     fields = [
         ('sender', Web3.isAddress),
         ('recipient', Web3.isAddress),
+        ('token_id', is_bytes8_int),
         ('start', is_bytes32_int),
         ('offset', is_bytes32_int),
-        ('token_id', is_bytes8_int),
         ('max_block', is_bytes32_int),
         ('nonce', is_bytes8_int),
         ('prime', is_bytes8_int),
@@ -158,12 +158,4 @@ class Signature(SimpleSerializableElement):
         ('v', is_bytes32_int),
         ('r', is_bytes32_int),
         ('s', is_bytes32_int),
-    ]
-
-
-class DepositRecord(SimpleSerializableElement):
-    fields = [
-        ('recipient', Web3.isAddress),
-        ('amount', is_bytes32_int),
-        ('token_id', is_bytes8_int),
     ]
