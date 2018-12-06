@@ -6,6 +6,9 @@ from math import floor, ceil, log
 from hexbytes import HexBytes
 from plasmalib.constants import *
 from eth_utils import encode_hex as encode_hex_0x
+from eth_utils import (
+    int_to_big_endian,
+)
 # import json
 
 from pprint import PrettyPrinter
@@ -134,6 +137,12 @@ def construct_tree(txs):
         nodes = list(map(lambda x: MST(fst(x), snd(x)), pairs(nodes)))
     return nodes[0]
 
+
+def int_to_big_endian32(val):
+    return int_to_big_endian(val).rjust(32, b'\0')
+
+def int_to_big_endian8(val):
+    return int_to_big_endian(val).rjust(8, b'\0')
 
 def addr_to_bytes(addr):
     return bytes.fromhex(addr[2:])
