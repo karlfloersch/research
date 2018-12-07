@@ -143,16 +143,39 @@ class State:
         it = self.db.iterator(include_value=False)
         token_lookup_key = token_id + start
         it.seek(token_lookup_key)
-        # Check if we need to move the iterator back to the previous range
         last_key = next(it)
-        if token_lookup_key > last_key:
-            it.prev()
-            it.prev()
+        # Move the iterator to the previous range
+        while last_key[0:40] > token_lookup_key or OFFSET_SUFFIX not in last_key[40:]:
+            last_key = it.prev()
+        if last_key[0:40] != token_lookup_key:
+            # If we entered the while loop, then we need to call next() to change the direction of the iterator
+            last_key = next(it)
         affected_ranges = []
-        last_key = next(it)
         end = token_id + end + OWNER_SUFFIX
         while end >= last_key:
             # Append to the affected_ranges list
             affected_ranges.append(last_key)
             last_key = next(it)
         return affected_ranges
+
+    def add_transaction(self, tx):
+        txs = tx.serializableElements
+        affected_ranges = self.get_ranges(txs[0].token_id, txs[0].start, txs[0].start + txs[0].offset - 1)
+        print(affected_ranges)
+        print(len(affected_ranges))
+        print([big_endian_to_int(r[8:40]) for r in affected_ranges])
+
+        # # Check that affected ranges are owned by the sender
+        # assert self.validate_range_owner(affected_ranges, tx.sender)
+        # # Shorten first range if needed
+        # if new_db_entry.start_to_offset_key != affected_ranges[0]:
+        #     # TODO: Add
+        #     self.db.put(affected_ranges[0], int_to_big_endian32(tx.start - big_endian_to_int(affected_ranges[0][8:40])))
+        #     print('setting new end offset to:', tx.start - big_endian_to_int(affected_ranges[0][8:40]))
+        #     del affected_ranges[0:2]
+        # # Shorten last range if needed
+        # if len(affected_ranges) != 0 and new_db_entry.end != affected_ranges[-1]:
+        #     self.db.put(affected_ranges[-2], int_to_big_endian32(tx.start + tx.offset))
+        #     print('setting new start to:', tx.start + tx.offset)
+        #     del affected_ranges[-2:]
+        # print('Final Affected range start pos:', [big_endian_to_int(r[8:40]) for r in affected_ranges])
