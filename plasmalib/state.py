@@ -166,6 +166,10 @@ class State:
                 return False
         return True
 
+    def delete_ranges(self, ranges):
+        for r in ranges:
+            self.db.delete(r)
+
     def add_transaction(self, tx):
         txs = tx.serializableElements
         affected_ranges = self.get_ranges(txs[0].token_id, txs[0].start, txs[0].start + txs[0].offset - 1)
