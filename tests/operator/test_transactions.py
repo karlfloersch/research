@@ -27,3 +27,8 @@ def test_transactions():
     assert tr_decoded_list[0].hash == tr1.hash
     assert tr_decoded_list[1].start == tr2.start
     assert sig_decoded_list[1].v == sig2.v
+
+def test_transaction_type_checking():
+    sender = Web3.sha3(1)[2:22]
+    recipient = Web3.sha3(2)[2:22]
+    TransferRecord(sender, recipient, 0, 300, 300, 10, 0, 3)

@@ -69,7 +69,7 @@ class SimpleSerializableElement:
         assert self.fields is not None
         assert len(self.fields) == len(args)
         for i, arg in enumerate(args):
-            assert self.fields[i][1]
+            assert self.fields[i][1](arg)
             setattr(self, self.fields[i][0], arg)
 
     def encode(self):
