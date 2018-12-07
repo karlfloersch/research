@@ -158,6 +158,14 @@ class State:
             last_key = next(it)
         return affected_ranges
 
+    def verify_ranges_owner(self, ranges, owner):
+        owner, = self.get_converted_parameters(addresses=(owner,))
+        for r in ranges:
+            r_owner = self.db.get(r)
+            if owner != r_owner:
+                return False
+        return True
+
     def add_transaction(self, tx):
         txs = tx.serializableElements
         affected_ranges = self.get_ranges(txs[0].token_id, txs[0].start, txs[0].start + txs[0].offset - 1)

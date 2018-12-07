@@ -31,6 +31,21 @@ def test_get_ranges(blank_state, mock_accts):
     assert [0, 0, 10, 10] == [big_endian_to_int(r[8:40]) for r in state.get_ranges(0, 5, 19)]
     assert [0, 0, 10, 10, 20, 20] == [big_endian_to_int(r[8:40]) for r in state.get_ranges(0, 5, 29)]
 
+def test_check_ranges_owner(blank_state, mock_accts):
+    state = blank_state
+    for i in range(5):
+        # Fill up tokens 0-99, alternating between two owners every 10 tokens
+        state.add_deposit(mock_accts[0].address, 0, 10)
+        state.add_deposit(mock_accts[1].address, 0, 10)
+    state.add_deposit(mock_accts[1].address, 0, 10)
+    test_range = state.get_ranges(0, 0, 9)
+    assert state.verify_ranges_owner(test_range[1::2], mock_accts[0].address)
+    test_range = state.get_ranges(0, 0, 19)
+    assert not state.verify_ranges_owner(test_range[1::2], mock_accts[0].address)
+    assert not state.verify_ranges_owner(test_range[1::2], mock_accts[1].address)
+    test_range = state.get_ranges(0, 90, 109)
+    assert state.verify_ranges_owner(test_range[1::2], mock_accts[1].address)
+
 
 def test_performace_get_ranges(blank_state, mock_accts):
     state = blank_state
