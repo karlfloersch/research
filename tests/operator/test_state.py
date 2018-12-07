@@ -19,24 +19,31 @@ def test_deposit(blank_state, mock_accts):
     assert end_total_deposits == 1000
     print('End total deposits:', end_total_deposits)
 
-
-def test_get_ranges(blank_state, mock_accts):
-    state = blank_state
+def make_simple_state(state, accts):
     for i in range(5):
         # Fill up tokens 0-99, alternating between two owners every 10 tokens
-        state.add_deposit(mock_accts[0].address, 0, 10)
-        state.add_deposit(mock_accts[1].address, 0, 10)
+        state.add_deposit(accts[0].address, 0, 10)
+        state.add_deposit(accts[1].address, 0, 10)
+    return state
+
+def test_add_transaction(blank_state, mock_accts):
+    state = make_simple_state(blank_state, mock_accts)
+    tr1 = TransferRecord(mock_accts[0].address, mock_accts[1].address, 0, 0, 10, 0, 0, 3)
+    tr2 = TransferRecord(mock_accts[1].address, mock_accts[0].address, 0, 10, 10, 0, 0, 3)
+    tr_list = SimpleSerializableList([tr1, tr2])
+    print(tr_list)
+    print(tr_list.serializableElements)
+    state.add_transaction(tr_list.serializableElements)
+
+def test_get_ranges(blank_state, mock_accts):
+    state = make_simple_state(blank_state, mock_accts)
     assert [0, 0] == [big_endian_to_int(r[8:40]) for r in state.get_ranges(0, 0, 9)]
     assert [10, 10, 20, 20] == [big_endian_to_int(r[8:40]) for r in state.get_ranges(0, 10, 29)]
     assert [0, 0, 10, 10] == [big_endian_to_int(r[8:40]) for r in state.get_ranges(0, 5, 19)]
     assert [0, 0, 10, 10, 20, 20] == [big_endian_to_int(r[8:40]) for r in state.get_ranges(0, 5, 29)]
 
 def test_delete_ranges(blank_state, mock_accts):
-    state = blank_state
-    for i in range(5):
-        # Fill up tokens 0-99, alternating between two owners every 10 tokens
-        state.add_deposit(mock_accts[0].address, 0, 10)
-        state.add_deposit(mock_accts[1].address, 0, 10)
+    state = make_simple_state(blank_state, mock_accts)
     assert [0, 0] == [big_endian_to_int(r[8:40]) for r in state.get_ranges(0, 0, 9)]
     ranges_to_delete = state.get_ranges(0, 10, 29)
     assert [10, 10, 20, 20] == [big_endian_to_int(r[8:40]) for r in ranges_to_delete]
@@ -45,11 +52,7 @@ def test_delete_ranges(blank_state, mock_accts):
     assert [0, 0] == [big_endian_to_int(r[8:40]) for r in new_ranges]
 
 def test_check_ranges_owner(blank_state, mock_accts):
-    state = blank_state
-    for i in range(5):
-        # Fill up tokens 0-99, alternating between two owners every 10 tokens
-        state.add_deposit(mock_accts[0].address, 0, 10)
-        state.add_deposit(mock_accts[1].address, 0, 10)
+    state = make_simple_state(blank_state, mock_accts)
     state.add_deposit(mock_accts[1].address, 0, 10)
     test_range = state.get_ranges(0, 0, 9)
     assert state.verify_ranges_owner(test_range[1::2], mock_accts[0].address)

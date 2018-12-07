@@ -170,12 +170,31 @@ class State:
         for r in ranges:
             self.db.delete(r)
 
-    def add_transaction(self, tx):
-        txs = tx.serializableElements
-        affected_ranges = self.get_ranges(txs[0].token_id, txs[0].start, txs[0].start + txs[0].offset - 1)
+    def add_transaction(self, txs):
+        affected_ranges = []
+        for tx in txs:
+            tx_ranges = self.get_ranges(tx.token_id, tx.start, tx.start + tx.offset - 1)
+            assert self.verify_ranges_owner(tx_ranges[1::2], tx.sender)
+            print([big_endian_to_int(r[8:40]) for r in tx_ranges])
+            affected_ranges.append(tx_ranges)
         print(affected_ranges)
-        print(len(affected_ranges))
-        print([big_endian_to_int(r[8:40]) for r in affected_ranges])
+        for i, tx in enumerate(txs):
+            self.add_transfer(tx, affected_ranges[i])
+
+    def add_transfer(self, transfer, affected_ranges):
+        sender, recipient, token_id, start, offset = self.get_converted_parameters(addresses=(transfer.sender, transfer.recipient), bytes8s=(transfer.token_id,), bytes32s=(transfer.start, transfer.offset))
+        end = token_id + int_to_big_endian32(big_endian_to_int(start) + big_endian_to_int(offset) - 1) + OFFSET_SUFFIX
+        # Shorten first range if needed
+        if get_start_to_offset_key(token_id, start) != affected_ranges[0]:
+            # TODO: Add
+            self.db.put(affected_ranges[0], int_to_big_endian32(big_endian_to_int(start) - big_endian_to_int(affected_ranges[0][8:40])))
+            print('setting new end offset to:', big_endian_to_int(start) - big_endian_to_int(affected_ranges[0][8:40]))
+            del affected_ranges[0:2]
+        # Shorten last range if needed
+        if len(affected_ranges) != 0 and end != affected_ranges[-1]:
+            self.db.put(affected_ranges[-2], start + offset)
+            print('setting new start to:', big_endian_to_int(start) + big_endian_to_int(offset))
+            del affected_ranges[-2:]
 
         # # Check that affected ranges are owned by the sender
         # assert self.validate_range_owner(affected_ranges, tx.sender)
