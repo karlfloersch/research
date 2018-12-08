@@ -1,3 +1,13 @@
+####### DEPRECATED #######
+####### DEPRECATED #######
+####### DEPRECATED #######
+####### DEPRECATED #######
+####### DEPRECATED #######
+####### DEPRECATED #######
+
+
+
+
 
 operator: public(address)
 deposits: public(wei_value[address])
