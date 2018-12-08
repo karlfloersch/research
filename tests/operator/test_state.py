@@ -28,8 +28,8 @@ def make_simple_state(state, accts):
 
 def test_add_transaction(blank_state, mock_accts):
     state = make_simple_state(blank_state, mock_accts)
-    tr1 = TransferRecord(mock_accts[0].address, mock_accts[1].address, 0, 0, 10, 0, 0, 3)
-    tr2 = TransferRecord(mock_accts[1].address, mock_accts[0].address, 0, 10, 10, 0, 0, 3)
+    tr1 = TransferRecord(mock_accts[0].address, mock_accts[1].address, 0, 0, 9, 0, 0, 3)
+    tr2 = TransferRecord(mock_accts[1].address, mock_accts[0].address, 0, 10, 9, 0, 0, 3)
     tr_list = SimpleSerializableList([tr1, tr2])
     print(tr_list)
     print(tr_list.serializableElements)
@@ -86,15 +86,15 @@ def test_performace_get_ranges(blank_state, mock_accts):
     print('Get ranges time:', get_ranges_time - added_deposits_time)
 
 
-def test_large_state_get_ranges():
-    db_path = '/tmp/plasma_prime_blank_test_db/1543988143.476207'
-    file_log_path = '/tmp/plasma_prime_blank_test_tx_log/1543988143.476207'
-    state = State(db_path, file_log_path, backup_timeout=60)
-    total_deposits = 100000000
-    start_time = time.time()
-    for i in range(100000):
-        dist_from_middle = randrange(1, 500)
-        middle_select = randrange(dist_from_middle, total_deposits-dist_from_middle)
-        state.get_ranges(0, middle_select - dist_from_middle, middle_select + dist_from_middle)
-    get_ranges_time = time.time()
-    print('Get ranges time:', get_ranges_time - start_time)
+# def test_large_state_get_ranges():
+#     db_path = '/tmp/plasma_prime_blank_test_db/1543988143.476207'
+#     file_log_path = '/tmp/plasma_prime_blank_test_tx_log/1543988143.476207'
+#     state = State(db_path, file_log_path, backup_timeout=60)
+#     total_deposits = 100000000
+#     start_time = time.time()
+#     for i in range(100000):
+#         dist_from_middle = randrange(1, 500)
+#         middle_select = randrange(dist_from_middle, total_deposits-dist_from_middle)
+#         state.get_ranges(0, middle_select - dist_from_middle, middle_select + dist_from_middle)
+#     get_ranges_time = time.time()
+#     print('Get ranges time:', get_ranges_time - start_time)

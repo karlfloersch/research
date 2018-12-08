@@ -14,8 +14,8 @@ import rlp
 
 
 TOTAL_DEPOSITS_PREFIX = b'total_deposits-'
-OFFSET_SUFFIX = b'-1offset'
-OWNER_SUFFIX = b'-2owner'
+OFFSET_SUFFIX = b'-0offset'
+OWNER_SUFFIX = b'-1owner'
 NONCE_SUFFIX = b'-nonce'
 
 def get_total_deposits_key(token_id):
@@ -62,20 +62,6 @@ class FileLog:
         self.tmp_log.close()
         os.rename(self.tmp_log_path, os.path.join(self.log_dir, int(time.time())))
         self.tmp_log = open(self.tmp_log_path, 'a')
-
-
-class RangeDBEntry:
-    def __init__(self, owner, start, offset, token_id):
-        # Convert and validate the parameters
-        self.owner, self.start, self.offset, self.token_id = self.get_converted_parameters(owner, start, offset, token_id)
-        # For convenience save the keys which we will use to store the range in the db
-        self.start_lookup_key = self.token_id + self.start
-        self.start_to_offset_key = self.start_lookup_key + OFFSET_SUFFIX
-        self.start_to_owner_key = self.start_lookup_key + OWNER_SUFFIX
-        self.owner_to_nonce_key = self.owner + NONCE_SUFFIX
-        self.owner_to_start_key = self.owner + self.token_id + self.start
-        # For convenience save the end
-        self.end = self.token_id + int_to_big_endian32(big_endian_to_int(self.start) + big_endian_to_int(self.offset) - 1) + OFFSET_SUFFIX
 
 
 class State:
@@ -173,7 +159,7 @@ class State:
     def add_transaction(self, txs):
         affected_ranges = []
         for tx in txs:
-            tx_ranges = self.get_ranges(tx.token_id, tx.start, tx.start + tx.offset - 1)
+            tx_ranges = self.get_ranges(tx.token_id, tx.start, tx.start + tx.offset)
             assert self.verify_ranges_owner(tx_ranges[1::2], tx.sender)
             print([big_endian_to_int(r[8:40]) for r in tx_ranges])
             affected_ranges.append(tx_ranges)
@@ -183,7 +169,7 @@ class State:
 
     def add_transfer(self, transfer, affected_ranges):
         sender, recipient, token_id, start, offset = self.get_converted_parameters(addresses=(transfer.sender, transfer.recipient), bytes8s=(transfer.token_id,), bytes32s=(transfer.start, transfer.offset))
-        end = token_id + int_to_big_endian32(big_endian_to_int(start) + big_endian_to_int(offset) - 1) + OFFSET_SUFFIX
+        end = token_id + int_to_big_endian32(big_endian_to_int(start) + big_endian_to_int(offset)) + OFFSET_SUFFIX
         # Shorten first range if needed
         if get_start_to_offset_key(token_id, start) != affected_ranges[0]:
             # TODO: Add
