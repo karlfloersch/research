@@ -30,10 +30,10 @@ class Coin:
         self.recipient = recipient
 
     def __str__(self):
-        coin = 'id: ' + green(str(self.id))
+        coin = 'id: ' + purp(str(self.id))
         prev_block = ', prev_block: ' + purp(str(self.prev_block))
-        sender = ', sender: ' + pink(self.sender)
-        recipient = ', recipient: ' + yellow(self.recipient)
+        sender = ', sender: ' + self.sender
+        recipient = ', recipient: ' + self.recipient
         return str('[' + coin + prev_block + sender + recipient + ']')
 
 class Block:
@@ -85,19 +85,19 @@ def apply_blocks(state, blocks):
         apply_block(state, block)
     return state
 
-DEPOSIT = 'DEPOSIT'
-alice = 'alice'
-invalid_alice = 'invalid_alice'
-bob = 'bob'
-invalid_bob = 'invalid_bob'
+DEPOSIT = pink('DEPOSIT')
+alice = yellow('alice')
+invalid_alice = red('invalid_alice')
+bob = green('bob')
+invalid_bob = red('invalid_bob')
 
 # Test spent coin
 # Process genesis block
 state = {'block': 0}
 blocks = [
-    Block([Coin(0, 0, DEPOSIT, alice), Coin(1, 0, DEPOSIT, bob)]),
-    Block([Coin(0, 0, alice, bob), Coin(1, 0, bob, alice)]),
-    Block([Coin(0, 1, bob, alice), Coin(1, 1, alice, bob)])
+    Block([Coin(0, 0, DEPOSIT, alice)]),
+    Block([Coin(0, 0, alice, bob)]),
+    Block([Coin(0, 1, bob, alice)])
 ]
 state = apply_blocks(state, blocks)
 print(state)
