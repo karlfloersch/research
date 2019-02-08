@@ -37,8 +37,9 @@ class Coin:
         return str('[' + coin + prev_block + sender + recipient + ']')
 
 class Block:
-    def __init__(self, coins):
+    def __init__(self, number, coins):
         self.coins = coins
+        self.number = number
 
     def __str__(self):
         output = ''
@@ -50,18 +51,54 @@ class Block:
         return coin in self.coins
 
 class Exit:
-    def __init__(self, time, coin_id, owner, block):
-        self.time = time
+    def __init__(self, eth_block_number, coin_id, owner, plasma_block):
+        self.eth_block_number = eth_block_number
         self.coin_id = coin_id
         self.owner = owner
-        self.block = block
+        self.plasma_block = plasma_block
 
     def cancel(self, spend_coin):
-        if (self.block == spend_coin.prev_block and self.owner == spend_coin.sender):
+        if (self.plasma_block == spend_coin.prev_plasma_block and self.owner == spend_coin.sender):
             return True
         return False
 
+class PlasmaContract:
+    def __init__(self):
+        self.eth_block_number = 0  # the current eth block number -- this can be used to simulate time passing in the exit game
+        self.exit_queues = dict()  # coin_id -> plasma_block_number -> exit_object
+        self.exited_coins = dict()  # coin_id -> True / False
+
+    def exit_coin(self, coin_id, owner, plasma_block):
+        new_exit = Exit(self.eth_block_number, coin_id, owner, plasma_block)  # create a new exit object
+        if coin_id not in self.exit_queues:
+            self.exit_queues[coin_id] = dict()
+        self.exit_queues[coin_id][new_exit.plasma_block.number] = new_exit  # add this exit to the queue
+        return new_exit  # return our new exit object
+
+    def cancel_exit(self, exit, coin_spend):
+        # Check that the coin which spends the exit is from the owner
+        # assert exit.owner == coin_spend.sender
+        # ...and that the coin which spends the exit references that coin with prev_block
+        # assert exit.plasma_block == coin_spend.prev_block
+        # ...and that the exit is really in the block
+        # ...
+        # Then cancel the exit
+        # del self.exit_queues[exit.coin_id][exit.plasma_block.number]
+        pass
+
+    def finalize_exit(self, exit):
+        # Check if the coin has already been exited
+        # assert self.exit in self.exited_coins
+        # ...and that the exit period is over
+        # assert exit.eth_block_number + EXIT_PERIOD < self.eth_block_number
+        # Determine the exit winner
+        # winner = the lowest `plasma_block_number` inside of self.exit_queues[exit.coin_id]
+        # Record this exit
+        # self.exited_coins[exit.exit_id] = True
+        pass
+
 def validate_coin(state, coin):
+    ''' Check if a particular state & coin combination is valid '''
     if state[coin.id]['block'] != coin.prev_block:
         raise Exception('Invalid prev_block: ' + str(coin.prev_block) + '. Expected: ' + str(state[coin.id]['block']))
     if coin.sender != state[coin.id]['owner']:
@@ -69,6 +106,7 @@ def validate_coin(state, coin):
     return True
 
 def apply_block(state, block):
+    ''' Applies the block & thows if the block is invalid '''
     for coin in block.coins:
         print(coin)
         if coin.sender == DEPOSIT or validate_coin(state, coin):
@@ -86,18 +124,28 @@ def apply_blocks(state, blocks):
     return state
 
 DEPOSIT = pink('DEPOSIT')
-alice = yellow('alice')
-invalid_alice = red('invalid_alice')
-bob = green('bob')
-invalid_bob = red('invalid_bob')
+alice_sigs = [yellow('alice1'), yellow('alice2')]
+bob_sigs = [green('bob')]
 
-# Test spent coin
-# Process genesis block
-state = {'block': 0}
-blocks = [
-    Block([Coin(0, 0, DEPOSIT, alice)]),
-    Block([Coin(0, 0, alice, bob)]),
-    Block([Coin(0, 1, bob, alice)])
+# TODO: Test spent coin
+state = {'block': 0}  # Genesis state
+coins = [  # Coins
+    Coin(0, 0, DEPOSIT, alice_sigs[0]),
+    Coin(0, 0, alice_sigs[0], bob_sigs[0]),
+    Coin(0, 1, bob_sigs[0], alice_sigs[1])
 ]
+blocks = [  # Blocks
+    Block(0, [coins[0]]),
+    Block(1, [coins[1]]),
+    Block(2, [coins[2]])
+]
+# State after having applied blocks -- this just checks validity. Note validity is not checked in the smart contract
 state = apply_blocks(state, blocks)
-print(state)
+print(state)  # this state stuff is mostly for checking if we have any invalid blocks
+
+# Now that we know all the blocks are valid and can calculate the correct owner, let's try exiting a spent coin
+plasma_contract = PlasmaContract()  # create new Plasma contract
+plasma_contract.exit_coin(0, alice_sigs[0], blocks[0])  # try to exit spent coin
+# TODO: Challenge spent coin
+# TODO: Test exiting an invalid coin and then reacting
+# TODO: Test normal exits... test everything!
