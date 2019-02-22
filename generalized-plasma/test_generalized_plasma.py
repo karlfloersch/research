@@ -1,15 +1,6 @@
 from generalized_plasma import ERC20, User, Erc20SettlementContract, TransferSettlementContract, Erc20Deposit, CashTransaction, Eth
 import pytest
 
-# # User definitions
-# alice = User('alice')
-# bob = User('bob')
-# # Ethereum object
-# eth = {'block_number': 0}
-# # Contract definitions
-# omg = ERC20({alice.address: 1000, bob.address: 1000})
-# omgSettlementCt = Erc20SettlementContract(eth, 'omgSettlement', omg)
-
 alice = User('alice')
 bob = User('bob')
 mallory = User('mallory')
