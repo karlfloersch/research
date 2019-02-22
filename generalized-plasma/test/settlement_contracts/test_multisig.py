@@ -5,12 +5,22 @@ from settlement_contracts.multisig import MultiSigTransaction, MultiSigSettlemen
 def multisig_settlement_ct(erc20_settlement_ct):
     return MultiSigSettlementContract(erc20_settlement_ct)
 
+def test_submit_claim_on_deposit(alice, bob, charlie, erc20_settlement_ct, multisig_settlement_ct):
+    alice_and_bob_deposit = erc20_settlement_ct.deposit_ERC20(alice.address,
+                                                              100,
+                                                              multisig_settlement_ct,
+                                                              {'recipient': [alice.address, bob.address]})
+    # Try submitting claim
+    erc20_settlement_ct.submit_claim(deposit=alice_and_bob_deposit)
+    # Check the claim was recorded
+    assert len(erc20_settlement_ct.claim_queues) == 1
+
 def test_submit_claim_on_transaction(alice, bob, charlie, erc20_settlement_ct, multisig_settlement_ct):
     # Deposit and send a tx
     alice_and_bob_deposit = erc20_settlement_ct.deposit_ERC20(alice.address,
                                                               100,
                                                               multisig_settlement_ct,
-                                                              {'recipients': [alice.address, bob.address]})
+                                                              {'recipient': [alice.address, bob.address]})
     tx0_alice_and_bob = MultiSigTransaction(alice_and_bob_deposit.coin_id,
                                             0,
                                             [alice.address, bob.address],
