@@ -28,32 +28,28 @@ class ERC20:
         return True
 
 class Transaction:
-    def __init__(self, coin_id, settlement_contract, plasma_block_number):
+    def __init__(self, coin_id, plasma_block_number, settlement_contract, parameters):
+        for key in parameters:
+            setattr(self, key, parameters[key])
         self.coin_id = coin_id
         self.settlement_contract = settlement_contract
         self.plasma_block_number = plasma_block_number
 
-class CashTransaction(Transaction):
-    def __init__(self, coin_id, sender, recipient, plasma_block_number, settlement_contract):
-        Transaction.__init__(self, coin_id, settlement_contract, plasma_block_number)
-        self.sender = sender
-        self.recipient = recipient
-
 class Erc20Deposit(Transaction):
-    def __init__(self, coin_id, recipient, value, settlement_contract, plasma_block_number):
-        Transaction.__init__(self, coin_id, settlement_contract, plasma_block_number)
-        self.recipient = recipient
+    def __init__(self, coin_id, plasma_block_number, value, settlement_contract, parameters):
+        Transaction.__init__(self, coin_id, plasma_block_number, settlement_contract, parameters)
         self.value = value
 
 class Claim:
     def __init__(self, eth_block_number, transaction):
         assert isinstance(transaction, Transaction)
-        self.start_block_number = eth_block_number
         self.transaction = transaction
+        self.start_block_number = eth_block_number
 
 class ClaimQueue:
     def __init__(self, initial_claim):
         self.claims = {}
+        # TODO: Dispute duration should change for everything to the right of the plasma_block_number
         self.dispute_duration = 0
         self.is_open = True
         self.add(initial_claim)
@@ -78,22 +74,23 @@ class ClaimQueue:
         self.is_open = False
 
 class Erc20SettlementContract:
-    def __init__(self, eth, address, token):
+    def __init__(self, eth, address, erc20_contract):
         self.eth = eth
         self.address = address
-        self.token = token
+        self.erc20_contract = erc20_contract
         self.deposits = dict()
         self.total_deposits = 0
         self.commitments = []
         self.claim_queues = {}
         self.resolved_claims = []
 
-    def deposit_ERC20(self, depositor, deposit_amount, settlement_contract):
+    def deposit_ERC20(self, depositor, deposit_amount, settlement_contract, parameters):
         assert deposit_amount > 0
         # Make the transfer
-        self.token.transferFrom(depositor, self.address, deposit_amount)
+        self.erc20_contract.transferFrom(depositor, self.address, deposit_amount)
         # Record the deposit
-        deposit = Erc20Deposit(self.total_deposits, depositor, deposit_amount, settlement_contract, len(self.commitments) - 1)
+        plasma_block_number = len(self.commitments) - 1
+        deposit = Erc20Deposit(self.total_deposits, plasma_block_number, deposit_amount, settlement_contract, parameters)
         self.deposits[deposit.coin_id] = deposit
         # Increment total deposits
         self.total_deposits += 1
@@ -147,23 +144,4 @@ class Erc20SettlementContract:
         # Close the claim queue
         claim_queue.close()
         # Send the funds to the erc20_recipient
-        self.token.transferFrom(self.address, erc20_recipient, self.deposits[claim.transaction.coin_id].value)
-
-
-class TransferSettlementContract:
-    dispute_duration = 10
-
-    def __init__(self, parent_settlement_contract):
-        self.parent = parent_settlement_contract
-
-    def dispute_claim(self, claim, spend_transaction):
-        # Check these are spends of the same coin
-        assert claim.transaction.coin_id == spend_transaction.coin_id
-        # Check that the sender is correct
-        assert claim.transaction.recipient == spend_transaction.sender
-        # Check that the spend is after the claim transaction
-        assert claim.transaction.plasma_block_number < spend_transaction.plasma_block_number
-        self.parent.dispute_claim(self, claim)
-
-    def resolve_claim(self, claim):
-        self.parent.resolve_claim(self, claim, claim.transaction.recipient)
+        self.erc20_contract.transferFrom(self.address, erc20_recipient, self.deposits[claim.transaction.coin_id].value)
