@@ -3,3 +3,4 @@ vyper
 *pycache*
 *.egg-info
 *.swp
+*.pyc
