@@ -93,7 +93,7 @@ class Erc20SettlementContract:
         # Make the transfer
         self.token.transferFrom(depositor, self.address, deposit_amount)
         # Record the deposit
-        deposit = Erc20Deposit(self.total_deposits, depositor, deposit_amount, settlement_contract, len(self.commitments))
+        deposit = Erc20Deposit(self.total_deposits, depositor, deposit_amount, settlement_contract, len(self.commitments) - 1)
         self.deposits[deposit.coin_id] = deposit
         # Increment total deposits
         self.total_deposits += 1
@@ -107,7 +107,7 @@ class Erc20SettlementContract:
         if transaction is None:
             return False
         assert transaction in self.commitments[transaction.plasma_block_number]
-        assert self.deposits[transaction.coin_id] and self.deposits[transaction.coin_id].plasma_block_number <= transaction.plasma_block_number
+        assert self.deposits[transaction.coin_id] and self.deposits[transaction.coin_id].plasma_block_number < transaction.plasma_block_number
         return True
 
     def _validate_deposit(self, deposit):
@@ -135,18 +135,19 @@ class Erc20SettlementContract:
         claim_queue = self.claim_queues[claim.transaction.coin_id]
         claim_queue.remove(claim)
 
-    def resolve_claim(self, claim):
-        claim_queue = self.claim_queues[claim.coin.id]
+    def resolve_claim(self, msg_sender, claim, erc20_recipient):
+        assert msg_sender == claim.transaction.settlement_contract
+        claim_queue = self.claim_queues[claim.transaction.coin_id]
         # Get the claim which is earliest in our claim queue
         recorded_claim = claim_queue.first()
         # Check that we are attempting to exit the earliest claim
         assert recorded_claim == claim
         # Check that the dispute_duration has passed
-        assert self.eth.block_number > claim.start_block_number + claim_queue.dispute_duration
+        assert self.eth.block_number >= claim.start_block_number + claim_queue.dispute_duration
         # Close the claim queue
         claim_queue.close()
-        # Send the funds
-        self.token.transferFrom(self.address, claim.claimant, claim.coin.value)
+        # Send the funds to the erc20_recipient
+        self.token.transferFrom(self.address, erc20_recipient, self.deposits[claim.transaction.coin_id].value)
 
 
 class TransferSettlementContract:
@@ -161,8 +162,8 @@ class TransferSettlementContract:
         # Check that the sender is correct
         assert claim.transaction.recipient == spend_transaction.sender
         # Check that the spend is after the claim transaction
-        assert claim.transaction.plasma_block_number <= spend_transaction.plasma_block_number
+        assert claim.transaction.plasma_block_number < spend_transaction.plasma_block_number
         self.parent.dispute_claim(self, claim)
 
     def resolve_claim(self, claim):
-        pass
+        self.parent.resolve_claim(self, claim, claim.transaction.recipient)
