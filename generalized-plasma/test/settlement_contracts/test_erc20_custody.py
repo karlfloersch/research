@@ -1,13 +1,6 @@
-from settlement_contracts.root_erc20 import Erc20Deposit
+from settlement_contracts.erc20_custody import Erc20Deposit
 from settlement_contracts.transfer import TransferTransaction
 
-# ~~~~ Erc20Contract tests ~~~~
-def test_erc20_transfers(alice, bob, erc20_ct):
-    assert erc20_ct.balanceOf(alice.address) == 1000 and erc20_ct.balanceOf(bob.address) == 1000
-    erc20_ct.transferFrom(alice.address, bob.address, 500)
-    assert erc20_ct.balanceOf(alice.address) == 500 and erc20_ct.balanceOf(bob.address) == 1500
-
-# ~~~~ Erc20SettlementContract tests ~~~~
 def test_deposit(alice, erc20_ct, erc20_settlement_ct, transfer_settlement_ct):
     # Deposit some funds
     erc20_settlement_ct.deposit_ERC20(alice.address, 100, transfer_settlement_ct, {'recipient': alice.address})

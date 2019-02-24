@@ -1,6 +1,6 @@
 import pytest
 from utils import ERC20, User, Eth
-from settlement_contracts.root_erc20 import Erc20SettlementContract
+from settlement_contracts.erc20_custody import Erc20SettlementContract
 from settlement_contracts.transfer import TransferSettlementContract
 
 @pytest.fixture
