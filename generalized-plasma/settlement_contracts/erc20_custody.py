@@ -83,3 +83,5 @@ class Erc20SettlementContract:
         claim_queue.close()
         # Send the funds to the erc20_recipient
         self.erc20_contract.transferFrom(self.address, erc20_recipient, self.deposits[claim.transaction.coin_id].value)
+        # Return the recipient
+        return erc20_recipient
