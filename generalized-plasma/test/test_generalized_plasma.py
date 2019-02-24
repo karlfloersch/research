@@ -1,4 +1,4 @@
-from generalized_plasma import Erc20Deposit
+from settlement_contracts.root_erc20 import Erc20Deposit
 from settlement_contracts.transfer import TransferTransaction
 
 # ~~~~ Erc20Contract tests ~~~~

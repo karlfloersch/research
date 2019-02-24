@@ -1,4 +1,4 @@
-from generalized_plasma import Transaction
+from utils import Transaction
 
 class MultiSigTransaction(Transaction):
     def __init__(self, coin_id, plasma_block_number, signers, recipient, settlement_contract, parameters):

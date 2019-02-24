@@ -1,4 +1,4 @@
-from generalized_plasma import Transaction
+from utils import Transaction
 
 class TransferTransaction(Transaction):
     def __init__(self, coin_id, plasma_block_number, signer, recipient, settlement_contract, parameters):
