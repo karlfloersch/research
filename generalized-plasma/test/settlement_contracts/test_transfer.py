@@ -26,15 +26,8 @@ def test_submit_dispute_on_deposit(alice, bob, erc20_settlement_ct, transfer_set
     deposit_claim = erc20_settlement_ct.submit_claim(deposit=alice_deposit)
     # Check the claim was recorded
     assert len(erc20_settlement_ct.claim_queues[tx0_alice_to_bob.coin_id]) == 1
-    # Alice attempts to call dispute directly & fails (can only be called by settlement contract
-    try:
-        erc20_settlement_ct.dispute_claim(alice.address, deposit_claim)
-        throws = False
-    except Exception:
-        throws = True
-    assert throws
     # Now bob disputes claim in the transfer settlement contract with the spend
-    transfer_settlement_ct.dispute_claim(deposit_claim, tx0_alice_to_bob)
+    erc20_settlement_ct.dispute_claim(bob.address, deposit_claim, tx0_alice_to_bob)
     # Check the claim was deleted
     assert len(erc20_settlement_ct.claim_queues[tx0_alice_to_bob.coin_id]) == 0
 
@@ -51,13 +44,13 @@ def test_invalid_tx_exit_queue_resolution(alice, mallory, erc20_settlement_ct, t
     erc20_settlement_ct.eth.block_number += transfer_settlement_ct.dispute_duration
     # Mallory attempts and fails to withdraw because there's another claim with priority
     try:
-        transfer_settlement_ct.resolve_claim(invalid_claim)
+        erc20_settlement_ct.resolve_claim(mallory.address, invalid_claim)
         throws = False
     except Exception:
         throws = True
     assert throws
     # Now alice withdraws
-    transfer_settlement_ct.resolve_claim(valid_claim)
+    erc20_settlement_ct.resolve_claim(alice.address, valid_claim)
     # Check that the balances have updated
     assert erc20_ct.balanceOf(alice.address) == 1000
     assert erc20_ct.balanceOf(erc20_settlement_ct.address) == 0

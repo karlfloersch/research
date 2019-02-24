@@ -12,7 +12,11 @@ class MultiSigSettlementContract:
     def __init__(self, parent_settlement_contract):
         self.parent = parent_settlement_contract
 
-    def dispute_claim(self, claim, spend_transaction):
+    def submit_claim(self, claim, witness):
+        # Anyone can submit a claim
+        return True
+
+    def dispute_claim(self, tx_origin, claim, spend_transaction):
         # Check these are spends of the same coin
         assert claim.transaction.coin_id == spend_transaction.coin_id
         # Check that the settlement contract of the claim is this contract
@@ -21,10 +25,12 @@ class MultiSigSettlementContract:
         assert claim.transaction.recipient == spend_transaction.signers
         # Check that the spend is after the claim transaction
         assert claim.transaction.plasma_block_number < spend_transaction.plasma_block_number
-        self.parent.dispute_claim(self, claim)
+        return True
 
-    def resolve_claim(self, claim, recipients_sigs, destination):
+    def resolve_claim(self, tx_origin, claim, witness):
+        # Extract required information from witness
+        recipients_sigs, destination = witness
         # Check that the resolution is signed off on by all parties in the multisig
         assert recipients_sigs == claim.transaction.recipient
-        # Send to the destination address
-        self.parent.resolve_claim(self, claim, destination)
+        # Return the recipient who should get the funds
+        return destination
