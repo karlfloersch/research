@@ -10,7 +10,7 @@ def test_submit_claim_on_deposit(alice, erc20_settlement_ct, transfer_settlement
 def test_submit_claim_on_transaction(alice, bob, erc20_settlement_ct, transfer_settlement_ct):
     # Deposit and send a tx
     alice_deposit = erc20_settlement_ct.deposit_ERC20(alice.address, 100, transfer_settlement_ct, {'recipient': alice.address})  # Add deposit
-    tx0_alice_to_bob = TransferTransaction(alice_deposit.coin_id, 0, alice.address, bob.address, transfer_settlement_ct, {})  # Create tx
+    tx0_alice_to_bob = TransferTransaction(alice_deposit.coin_id, 0, alice.address, transfer_settlement_ct, {'recipient': bob.address})  # Create tx
     erc20_settlement_ct.add_commitment([tx0_alice_to_bob])  # Add the tx to the first commitment
     # Try submitting claim
     erc20_settlement_ct.submit_claim(transaction=tx0_alice_to_bob)
@@ -20,7 +20,7 @@ def test_submit_claim_on_transaction(alice, bob, erc20_settlement_ct, transfer_s
 def test_submit_dispute_on_deposit(alice, bob, erc20_settlement_ct, transfer_settlement_ct):
     # Deposit and send a tx
     alice_deposit = erc20_settlement_ct.deposit_ERC20(alice.address, 100, transfer_settlement_ct, {'recipient': alice.address})  # Add deposit
-    tx0_alice_to_bob = TransferTransaction(alice_deposit.coin_id, 0, alice.address, bob.address, transfer_settlement_ct, {})  # Create tx
+    tx0_alice_to_bob = TransferTransaction(alice_deposit.coin_id, 0, alice.address, transfer_settlement_ct, {'recipient': bob.address})  # Create tx
     erc20_settlement_ct.add_commitment([tx0_alice_to_bob])  # Add the tx to the first commitment
     # Try submitting claim on deposit
     deposit_claim = erc20_settlement_ct.submit_claim(deposit=alice_deposit)
@@ -34,7 +34,8 @@ def test_submit_dispute_on_deposit(alice, bob, erc20_settlement_ct, transfer_set
 def test_invalid_tx_exit_queue_resolution(alice, mallory, erc20_settlement_ct, transfer_settlement_ct, erc20_ct):
     # Deposit and send an invalid transaction
     alice_deposit = erc20_settlement_ct.deposit_ERC20(alice.address, 100, transfer_settlement_ct, {'recipient': alice.address})  # Add deposit
-    tx0_mallory_to_mallory = TransferTransaction(alice_deposit.coin_id, 0, mallory.address, mallory.address, transfer_settlement_ct, {})  # Invalid tx
+    # Create invalid tx
+    tx0_mallory_to_mallory = TransferTransaction(alice_deposit.coin_id, 0, mallory.address, transfer_settlement_ct, {'recipient': mallory.address})
     erc20_settlement_ct.add_commitment([tx0_mallory_to_mallory])  # Add the tx to the first commitment
     # Submit a claim for the invalid transaction
     invalid_claim = erc20_settlement_ct.submit_claim(transaction=tx0_mallory_to_mallory)

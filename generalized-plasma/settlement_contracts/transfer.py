@@ -1,10 +1,9 @@
 from utils import Transaction
 
 class TransferTransaction(Transaction):
-    def __init__(self, coin_id, plasma_block_number, signer, recipient, settlement_contract, parameters):
-        Transaction.__init__(self, coin_id, plasma_block_number, settlement_contract, parameters)
+    def __init__(self, coin_id, plasma_block_number, signer, new_settlement_contract, parameters):
+        Transaction.__init__(self, coin_id, plasma_block_number, new_settlement_contract, parameters)
         self.signer = signer
-        self.recipient = recipient
 
 class TransferSettlementContract:
     dispute_duration = 10
@@ -19,8 +18,6 @@ class TransferSettlementContract:
     def dispute_claim(self, tx_origin, claim, spend_transaction):
         # Check these are spends of the same coin
         assert claim.transaction.coin_id == spend_transaction.coin_id
-        # Check that the settlement contract of the claim is this contract
-        assert claim.transaction.settlement_contract == self
         # Check that the signature is valid
         assert claim.transaction.recipient == spend_transaction.signer
         # Check that the spend is after the claim transaction

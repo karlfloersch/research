@@ -24,9 +24,8 @@ def test_submit_claim_on_transaction(alice, bob, charlie, erc20_settlement_ct, m
     tx0_alice_and_bob = MultiSigTransaction(alice_and_bob_deposit.coin_id,
                                             0,
                                             [alice.address, bob.address],
-                                            charlie.address,
                                             multisig_settlement_ct,
-                                            {})
+                                            {'recipient': [charlie.address]})
     erc20_settlement_ct.add_commitment([tx0_alice_and_bob])  # Add the tx to the first commitment
     # Try submitting claim
     erc20_settlement_ct.submit_claim(transaction=tx0_alice_and_bob)
@@ -42,9 +41,8 @@ def test_submit_dispute_on_deposit(alice, bob, charlie, erc20_settlement_ct, mul
     tx0_alice_and_bob = MultiSigTransaction(alice_and_bob_deposit.coin_id,
                                             0,
                                             [alice.address, bob.address],
-                                            charlie.address,
                                             multisig_settlement_ct,
-                                            {})
+                                            {'recipient': [charlie.address]})
     erc20_settlement_ct.add_commitment([tx0_alice_and_bob])  # Add the tx to the first commitment
     # Try submitting claim on deposit
     deposit_claim = erc20_settlement_ct.submit_claim(deposit=alice_and_bob_deposit)
@@ -64,9 +62,8 @@ def test_invalid_tx_exit_queue_resolution(alice, bob, mallory, erc20_settlement_
     tx0_mallory_to_mallory = MultiSigTransaction(alice_and_bob_deposit.coin_id,
                                                  0,
                                                  [mallory.address],
-                                                 [mallory.address],
                                                  multisig_settlement_ct,
-                                                 {})
+                                                 {'recipient': [mallory.address]})
     erc20_settlement_ct.add_commitment([tx0_mallory_to_mallory])  # Add the invalid tx to the first commitment
     # Submit a claim for the invalid transaction
     invalid_claim = erc20_settlement_ct.submit_claim(transaction=tx0_mallory_to_mallory)

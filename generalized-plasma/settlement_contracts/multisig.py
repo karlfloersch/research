@@ -1,10 +1,9 @@
 from utils import Transaction
 
 class MultiSigTransaction(Transaction):
-    def __init__(self, coin_id, plasma_block_number, signers, recipient, settlement_contract, parameters):
-        Transaction.__init__(self, coin_id, plasma_block_number, settlement_contract, parameters)
+    def __init__(self, coin_id, plasma_block_number, signers, new_settlement_contract, parameters):
+        Transaction.__init__(self, coin_id, plasma_block_number, new_settlement_contract, parameters)
         self.signers = signers  # Array of owner's signatures (in this it is just their names)
-        self.recipient = recipient
 
 class MultiSigSettlementContract:
     dispute_duration = 10
@@ -20,7 +19,7 @@ class MultiSigSettlementContract:
         # Check these are spends of the same coin
         assert claim.transaction.coin_id == spend_transaction.coin_id
         # Check that the settlement contract of the claim is this contract
-        assert claim.transaction.settlement_contract == self
+        assert claim.transaction.new_settlement_contract == self
         # Check that all signers have signed
         assert claim.transaction.recipient == spend_transaction.signers
         # Check that the spend is after the claim transaction

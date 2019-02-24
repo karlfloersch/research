@@ -1,8 +1,8 @@
 from utils import Transaction, Claim, ClaimQueue
 
 class Erc20Deposit(Transaction):
-    def __init__(self, coin_id, plasma_block_number, value, settlement_contract, parameters):
-        Transaction.__init__(self, coin_id, plasma_block_number, settlement_contract, parameters)
+    def __init__(self, coin_id, plasma_block_number, value, new_settlement_contract, parameters):
+        Transaction.__init__(self, coin_id, plasma_block_number, new_settlement_contract, parameters)
         self.value = value
 
 class Erc20SettlementContract:
@@ -16,13 +16,13 @@ class Erc20SettlementContract:
         self.claim_queues = {}
         self.resolved_claims = []
 
-    def deposit_ERC20(self, depositor, deposit_amount, settlement_contract, parameters):
+    def deposit_ERC20(self, depositor, deposit_amount, new_settlement_contract, parameters):
         assert deposit_amount > 0
         # Make the transfer
         self.erc20_contract.transferFrom(depositor, self.address, deposit_amount)
         # Record the deposit
         plasma_block_number = len(self.commitments) - 1
-        deposit = Erc20Deposit(self.total_deposits, plasma_block_number, deposit_amount, settlement_contract, parameters)
+        deposit = Erc20Deposit(self.total_deposits, plasma_block_number, deposit_amount, new_settlement_contract, parameters)
         self.deposits[deposit.coin_id] = deposit
         # Increment total deposits
         self.total_deposits += 1
@@ -54,7 +54,7 @@ class Erc20SettlementContract:
         # Create a claim for either the transaction or deposit
         claim = Claim(self.eth.block_number, transaction) if transaction is not None else Claim(self.eth.block_number, deposit)
         # Check that the child submit claim function returns true
-        assert claim.transaction.settlement_contract.submit_claim(claim, claim_witness)
+        assert claim.transaction.new_settlement_contract.submit_claim(claim, claim_witness)
         # Create a new claim
         if claim.transaction.coin_id not in self.claim_queues:
             self.claim_queues[claim.transaction.coin_id] = ClaimQueue(claim)
@@ -64,14 +64,14 @@ class Erc20SettlementContract:
 
     def dispute_claim(self, tx_origin, claim, witness=None):
         # Call the settlement contract's `dispute_claim` function to ensure the claim should be deleted
-        assert claim.transaction.settlement_contract.dispute_claim(tx_origin, claim, witness)
+        assert claim.transaction.new_settlement_contract.dispute_claim(tx_origin, claim, witness)
         # Delete the claim
         claim_queue = self.claim_queues[claim.transaction.coin_id]
         claim_queue.remove(claim)
 
     def resolve_claim(self, tx_origin, claim, witness=None):
         # Call the settlement contract's `resolve_claim` function to ensure the claim should be resolved
-        erc20_recipient = claim.transaction.settlement_contract.resolve_claim(tx_origin, claim, witness=witness)
+        erc20_recipient = claim.transaction.new_settlement_contract.resolve_claim(tx_origin, claim, witness=witness)
         claim_queue = self.claim_queues[claim.transaction.coin_id]
         # Get the claim which is earliest in our claim queue
         recorded_claim = claim_queue.first()
