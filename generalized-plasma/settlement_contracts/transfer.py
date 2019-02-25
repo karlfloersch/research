@@ -1,9 +1,7 @@
-from utils import Transaction
-
-class TransferTransaction(Transaction):
-    def __init__(self, coin_id, plasma_block_number, signer, new_settlement_contract, parameters):
-        Transaction.__init__(self, coin_id, plasma_block_number, new_settlement_contract, parameters)
-        self.signer = signer
+class TransferTransitionWitness:
+    def __init__(self, signature, inclusion_witness):
+        self.signature = signature
+        self.inclusion_witness = inclusion_witness
 
 class TransferSettlementContract:
     dispute_duration = 10
@@ -11,21 +9,23 @@ class TransferSettlementContract:
     def __init__(self, parent_settlement_contract):
         self.parent = parent_settlement_contract
 
-    def submit_claim(self, claim, witness):
+    def can_claim(self, claim, witness):
         # Anyone can submit a claim
         return True
 
-    def dispute_claim(self, tx_origin, claim, spend_transaction):
+    def dispute_claim(self, tx_origin, old_state, transition_witness, new_state):
         # Check these are spends of the same coin
-        assert claim.transaction.coin_id == spend_transaction.coin_id
+        assert old_state.coin_id == new_state.coin_id
+        # Check inclusion proof
+        assert self.parent.validate_inclusion(new_state, transition_witness.inclusion_witness)
         # Check that the signature is valid
-        assert claim.transaction.recipient == spend_transaction.signer
-        # Check that the spend is after the claim transaction
-        assert claim.transaction.plasma_block_number < spend_transaction.plasma_block_number
+        assert old_state.recipient == transition_witness.signature
+        # Check that the spend is after the claim state
+        assert old_state.plasma_block_number < new_state.plasma_block_number
         return True
 
-    def resolve_claim(self, tx_origin, claim, witness):
+    def resolve_claim(self, tx_origin, claim, call_data=None):
         # Check that the resolution is called by the recipient
-        assert tx_origin == claim.transaction.recipient
-        # Return the recipient who should get the funds
-        return claim.transaction.recipient
+        assert tx_origin == claim.state.recipient
+        # Transfer funds to the recipient
+        self.parent.erc20_contract.transferFrom(self, claim.state.recipient, self.parent.deposits[claim.state.coin_id].value)

@@ -35,7 +35,7 @@ class ERC20:
         self.balances[recipient] += tokens
         return True
 
-class Transaction:
+class State:
     def __init__(self, coin_id, plasma_block_number, new_settlement_contract, parameters):
         for key in parameters:
             setattr(self, key, parameters[key])
@@ -44,9 +44,9 @@ class Transaction:
         self.plasma_block_number = plasma_block_number
 
 class Claim:
-    def __init__(self, eth_block_number, transaction):
-        assert isinstance(transaction, Transaction)
-        self.transaction = transaction
+    def __init__(self, eth_block_number, state):
+        assert isinstance(state, State)
+        self.state = state
         self.start_block_number = eth_block_number
 
 class ClaimQueue:
@@ -59,16 +59,16 @@ class ClaimQueue:
 
     def add(self, claim):
         assert self.is_open
-        if self.dispute_duration < claim.transaction.new_settlement_contract.dispute_duration:
-            self.dispute_duration = claim.transaction.new_settlement_contract.dispute_duration
-        self.claims[claim.transaction.plasma_block_number] = claim
+        if self.dispute_duration < claim.state.new_settlement_contract.dispute_duration:
+            self.dispute_duration = claim.state.new_settlement_contract.dispute_duration
+        self.claims[claim.state.plasma_block_number] = claim
 
     def __len__(self):
         return len(self.claims)
 
     def remove(self, claim):
         assert self.is_open
-        del self.claims[claim.transaction.plasma_block_number]
+        del self.claims[claim.state.plasma_block_number]
 
     def first(self):
         return self.claims[sorted(self.claims.keys())[0]]

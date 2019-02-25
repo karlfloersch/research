@@ -1,8 +1,8 @@
-from utils import Transaction, Claim, ClaimQueue
+from utils import State, Claim, ClaimQueue
 
-class Erc20Deposit(Transaction):
+class Erc20Deposit(State):
     def __init__(self, coin_id, plasma_block_number, value, new_settlement_contract, parameters):
-        Transaction.__init__(self, coin_id, plasma_block_number, new_settlement_contract, parameters)
+        State.__init__(self, coin_id, plasma_block_number, new_settlement_contract, parameters)
         self.value = value
 
 class Erc20SettlementContract:
@@ -32,47 +32,42 @@ class Erc20SettlementContract:
     def add_commitment(self, commit):
         self.commitments.append(commit)
 
-    def _validate_transaction(self, transaction, inclusion_witness):
-        if transaction is None:
-            return False
-        # Check inclusion. Note we don't need the inclusion_witness because we don't use an accumulator
-        assert transaction in self.commitments[transaction.plasma_block_number]
-        # Check that the transaction was added after the deposit of that coin
-        assert self.deposits[transaction.coin_id] and self.deposits[transaction.coin_id].plasma_block_number < transaction.plasma_block_number
+    def validate_inclusion(self, state, inclusion_witness):
+        # Check inclusion. Note we don't use an inclusion proof because our commitments include all data. Note this would often be a merkle proof
+        assert state.plasma_block_number == inclusion_witness
+        assert state in self.commitments[inclusion_witness]
+        # Check that the state was added after the deposit of that coin
+        assert self.deposits[state.coin_id] and self.deposits[state.coin_id].plasma_block_number < state.plasma_block_number
         return True
 
-    def _validate_deposit(self, deposit):
-        if deposit is None:
-            return False
+    def validate_deposit(self, state):
         # Check that the deposit was recorded
-        assert deposit == self.deposits[deposit.coin_id]
+        assert state == self.deposits[state.coin_id]
         return True
 
-    def submit_claim(self, transaction=None, deposit=None, inclusion_witness=None, claim_witness=None):
-        # Make sure we submitted either a valid transaction or deposit for this claim (no erc20 claims can be on coins that don't exist)
-        assert self._validate_transaction(transaction, inclusion_witness) or self._validate_deposit(deposit)
-        # Create a claim for either the transaction or deposit
-        claim = Claim(self.eth.block_number, transaction) if transaction is not None else Claim(self.eth.block_number, deposit)
-        # Check that the child submit claim function returns true
-        assert claim.transaction.new_settlement_contract.submit_claim(claim, claim_witness)
+    def submit_claim(self, state, inclusion_witness=None, child_claimability_witness=None):
+        # Make sure we submitted either a committed or deposited state for this claim
+        assert self.validate_inclusion(state, inclusion_witness) if inclusion_witness is not None else self.validate_deposit(state)
+        # Create a claim for the state
+        claim = Claim(self.eth.block_number, state)
+        # Check that the child `can_claim` function returns true
+        assert claim.state.new_settlement_contract.can_claim(claim, child_claimability_witness)
         # Create a new claim
-        if claim.transaction.coin_id not in self.claim_queues:
-            self.claim_queues[claim.transaction.coin_id] = ClaimQueue(claim)
+        if claim.state.coin_id not in self.claim_queues:
+            self.claim_queues[claim.state.coin_id] = ClaimQueue(claim)
         else:
-            self.claim_queues[claim.transaction.coin_id].add(claim)
+            self.claim_queues[claim.state.coin_id].add(claim)
         return claim
 
-    def dispute_claim(self, tx_origin, claim, witness=None):
+    def dispute_claim(self, tx_origin, claim, transition_witness, new_state):
         # Call the settlement contract's `dispute_claim` function to ensure the claim should be deleted
-        assert claim.transaction.new_settlement_contract.dispute_claim(tx_origin, claim, witness)
+        assert claim.state.new_settlement_contract.dispute_claim(tx_origin, claim.state, transition_witness, new_state)
         # Delete the claim
-        claim_queue = self.claim_queues[claim.transaction.coin_id]
+        claim_queue = self.claim_queues[claim.state.coin_id]
         claim_queue.remove(claim)
 
-    def resolve_claim(self, tx_origin, claim, witness=None):
-        # Call the settlement contract's `resolve_claim` function to ensure the claim should be resolved
-        erc20_recipient = claim.transaction.new_settlement_contract.resolve_claim(tx_origin, claim, witness=witness)
-        claim_queue = self.claim_queues[claim.transaction.coin_id]
+    def resolve_claim(self, tx_origin, claim, call_data=None):
+        claim_queue = self.claim_queues[claim.state.coin_id]
         # Get the claim which is earliest in our claim queue
         recorded_claim = claim_queue.first()
         # Check that we are attempting to exit the earliest claim
@@ -81,7 +76,7 @@ class Erc20SettlementContract:
         assert self.eth.block_number >= claim.start_block_number + claim_queue.dispute_duration
         # Close the claim queue
         claim_queue.close()
-        # Send the funds to the erc20_recipient
-        self.erc20_contract.transferFrom(self.address, erc20_recipient, self.deposits[claim.transaction.coin_id].value)
-        # Return the recipient
-        return erc20_recipient
+        # Send the funds to the claim's settlement contract
+        self.erc20_contract.transferFrom(self.address, claim.state.new_settlement_contract, self.deposits[claim.state.coin_id].value)
+        # Call the settlement contract's `resolve_claim` function to ensure the claim should be resolved
+        claim.state.new_settlement_contract.resolve_claim(tx_origin, claim, call_data)
