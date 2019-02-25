@@ -33,7 +33,7 @@ def test_submit_dispute_on_deposit(alice, bob, erc20_settlement_ct, transfer_set
     # Check the claim was deleted
     assert len(erc20_settlement_ct.claim_queues[state1_alice_to_bob.coin_id]) == 0
 
-def skip_test_invalid_tx_exit_queue_resolution(alice, mallory, erc20_settlement_ct, transfer_settlement_ct, erc20_ct):
+def test_invalid_tx_exit_queue_resolution(alice, mallory, erc20_settlement_ct, transfer_settlement_ct, erc20_ct):
     # Deposit and commit to invalid state
     state0_alice_deposit = erc20_settlement_ct.deposit_ERC20(alice.address, 100, transfer_settlement_ct, {'recipient': alice.address})  # Add deposit
     # Create invalid state
