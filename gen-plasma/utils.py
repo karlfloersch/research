@@ -36,11 +36,11 @@ class ERC20:
         return True
 
 class State:
-    def __init__(self, coin_id, plasma_block_number, new_settlement_contract, parameters):
+    def __init__(self, coin_id, plasma_block_number, new_predicate, parameters):
         for key in parameters:
             setattr(self, key, parameters[key])
         self.coin_id = coin_id
-        self.new_settlement_contract = new_settlement_contract
+        self.new_predicate = new_predicate
         self.plasma_block_number = plasma_block_number
 
 class Claim:
@@ -59,8 +59,8 @@ class ClaimQueue:
 
     def add(self, claim):
         assert self.is_open
-        if self.dispute_duration < claim.state.new_settlement_contract.dispute_duration:
-            self.dispute_duration = claim.state.new_settlement_contract.dispute_duration
+        if self.dispute_duration < claim.state.new_predicate.dispute_duration:
+            self.dispute_duration = claim.state.new_predicate.dispute_duration
         self.claims[claim.state.plasma_block_number] = claim
 
     def __len__(self):

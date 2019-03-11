@@ -1,11 +1,11 @@
 from utils import State, Claim, ClaimQueue
 
 class Erc20Deposit(State):
-    def __init__(self, coin_id, plasma_block_number, value, new_settlement_contract, parameters):
-        State.__init__(self, coin_id, plasma_block_number, new_settlement_contract, parameters)
+    def __init__(self, coin_id, plasma_block_number, value, new_predicate, parameters):
+        State.__init__(self, coin_id, plasma_block_number, new_predicate, parameters)
         self.value = value
 
-class Erc20SettlementContract:
+class Erc20PlasmaContract:
     def __init__(self, eth, address, erc20_contract):
         self.eth = eth
         self.address = address
@@ -16,13 +16,13 @@ class Erc20SettlementContract:
         self.claim_queues = {}
         self.resolved_claims = []
 
-    def deposit_ERC20(self, depositor, deposit_amount, new_settlement_contract, parameters):
+    def deposit_ERC20(self, depositor, deposit_amount, new_predicate, parameters):
         assert deposit_amount > 0
         # Make the transfer
         self.erc20_contract.transferFrom(depositor, self.address, deposit_amount)
         # Record the deposit
         plasma_block_number = len(self.commitments) - 1
-        deposit = Erc20Deposit(self.total_deposits, plasma_block_number, deposit_amount, new_settlement_contract, parameters)
+        deposit = Erc20Deposit(self.total_deposits, plasma_block_number, deposit_amount, new_predicate, parameters)
         self.deposits[deposit.coin_id] = deposit
         # Increment total deposits
         self.total_deposits += 1
@@ -51,7 +51,7 @@ class Erc20SettlementContract:
         # Create a claim for the state
         claim = Claim(self.eth.block_number, state)
         # Check that the child `can_claim` function returns true
-        assert claim.state.new_settlement_contract.can_claim(claim, child_claimability_witness)
+        assert claim.state.new_predicate.can_claim(claim, child_claimability_witness)
         # Create a new claim
         if claim.state.coin_id not in self.claim_queues:
             self.claim_queues[claim.state.coin_id] = ClaimQueue(claim)
@@ -61,7 +61,7 @@ class Erc20SettlementContract:
 
     def dispute_claim(self, tx_origin, claim, transition_witness, new_state):
         # Call the settlement contract's `dispute_claim` function to ensure the claim should be deleted
-        assert claim.state.new_settlement_contract.dispute_claim(tx_origin, claim.state, transition_witness, new_state)
+        assert claim.state.new_predicate.dispute_claim(tx_origin, claim.state, transition_witness, new_state)
         # Delete the claim
         claim_queue = self.claim_queues[claim.state.coin_id]
         claim_queue.remove(claim)
@@ -77,6 +77,6 @@ class Erc20SettlementContract:
         # Close the claim queue
         claim_queue.close()
         # Send the funds to the claim's settlement contract
-        self.erc20_contract.transferFrom(self.address, claim.state.new_settlement_contract, self.deposits[claim.state.coin_id].value)
+        self.erc20_contract.transferFrom(self.address, claim.state.new_predicate, self.deposits[claim.state.coin_id].value)
         # Call the settlement contract's `resolve_claim` function to ensure the claim should be resolved
-        claim.state.new_settlement_contract.resolve_claim(tx_origin, claim, call_data)
+        claim.state.new_predicate.resolve_claim(tx_origin, claim, call_data)

@@ -1,7 +1,7 @@
 import pytest
 from utils import ERC20, User, Eth
-from settlement_contracts.erc20_custody import Erc20SettlementContract
-from settlement_contracts.transfer import TransferSettlementContract
+from erc20_plasma_contract import Erc20PlasmaContract
+from predicates.transfer import TransferPredicate
 
 @pytest.fixture
 def alice():
@@ -28,10 +28,10 @@ def eth():
     return Eth(0)
 
 @pytest.fixture
-def erc20_settlement_ct(eth, erc20_ct):
+def erc20_plasma_ct(eth, erc20_ct):
     eth = Eth(0)
-    return Erc20SettlementContract(eth, 'erc20_settlement_ct', erc20_ct)
+    return Erc20PlasmaContract(eth, 'erc20_plasma_ct', erc20_ct)
 
 @pytest.fixture
-def transfer_settlement_ct(erc20_settlement_ct):
-    return TransferSettlementContract(erc20_settlement_ct)
+def transfer_predicate(erc20_plasma_ct):
+    return TransferPredicate(erc20_plasma_ct)

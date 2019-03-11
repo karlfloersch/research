@@ -3,7 +3,7 @@ class MultiSigTransitionWitness:
         self.signatures = signatures  # Array of owner's signatures (in this it is just their names)
         self.inclusion_witness = inclusion_witness
 
-class MultiSigSettlementContract:
+class MultiSigPredicate:
     dispute_duration = 10
 
     def __init__(self, parent_settlement_contract):

@@ -3,7 +3,7 @@ class TransferTransitionWitness:
         self.signature = signature
         self.inclusion_witness = inclusion_witness
 
-class TransferSettlementContract:
+class TransferPredicate:
     dispute_duration = 10
 
     def __init__(self, parent_settlement_contract):
