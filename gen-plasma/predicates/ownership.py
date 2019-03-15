@@ -1,9 +1,9 @@
-class TransferTransitionWitness:
+class OwnershipRevocationWitness:
     def __init__(self, signature, inclusion_witness):
         self.signature = signature
         self.inclusion_witness = inclusion_witness
 
-class TransferPredicate:
+class OwnershipPredicate:
     dispute_duration = 10
 
     def __init__(self, parent_settlement_contract):
@@ -13,6 +13,7 @@ class TransferPredicate:
         # Anyone can submit a claim
         return True
 
+    # def canRevoke(self, tx_origin, stateID, committment, revocationWitness):
     def dispute_claim(self, tx_origin, old_state, transition_witness, new_state):
         # Check these are spends of the same coin
         assert old_state.coin_id == new_state.coin_id

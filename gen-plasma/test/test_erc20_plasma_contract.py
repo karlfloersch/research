@@ -1,23 +1,28 @@
 from erc20_plasma_contract import Erc20Deposit
-from utils import State
+from utils import State, Commitment
 
-def test_deposit(alice, erc20_ct, erc20_plasma_ct, transfer_predicate):
+def test_deposit(alice, erc20_ct, erc20_plasma_ct, ownership_predicate):
     # Deposit some funds
-    erc20_plasma_ct.deposit_ERC20(alice.address, 100, transfer_predicate, {'recipient': alice.address})
+    erc20_plasma_ct.deposit(alice.address, 100, ownership_predicate, {'recipient': alice.address})
     # Assert the balances have changed
     assert erc20_ct.balanceOf(alice.address) == 900
     assert erc20_ct.balanceOf(erc20_plasma_ct.address) == 100
     # Assert that we recorded the deposit and incremented total_deposits
-    assert len(erc20_plasma_ct.deposits) == 1 and isinstance(erc20_plasma_ct.deposits[0], Erc20Deposit)
-    assert erc20_plasma_ct.total_deposits == 1
+    assert len(erc20_plasma_ct.claimable_ranges) == 1 and isinstance(next(iter(erc20_plasma_ct.claimable_ranges.values())), Erc20Deposit)
+    assert erc20_plasma_ct.total_deposits == 100
 
-def test_commitments(alice, bob, erc20_plasma_ct, transfer_predicate):
+def test_commitments(alice, bob, operator, erc20_plasma_ct, ownership_predicate):
     # Deposit some funds
-    state0_alice_deposit = erc20_plasma_ct.deposit_ERC20(alice.address, 100, transfer_predicate, {'recipient': alice.address})
-    state1_bob_deposit = erc20_plasma_ct.deposit_ERC20(alice.address, 100, transfer_predicate, {'recipient': bob.address})
-    # Create a tx which sends alice's coin to bob
-    state2_alice_to_bob = State(state0_alice_deposit.coin_id, 0, transfer_predicate, {'recipient': bob.address})
-    state3_bob_to_alice = State(state1_bob_deposit.coin_id, 0, transfer_predicate, {'recipient': alice.address})
-    erc20_plasma_ct.add_commitment([state2_alice_to_bob, state3_bob_to_alice])
-    # Assert inclusion of our txs
-    assert state2_alice_to_bob in erc20_plasma_ct.commitments[0] and state3_bob_to_alice in erc20_plasma_ct.commitments[0]
+    commit0_alice_deposit = erc20_plasma_ct.deposit(alice.address, 100, ownership_predicate, {'recipient': alice.address})
+    commit1_bob_deposit = erc20_plasma_ct.deposit(alice.address, 100, ownership_predicate, {'recipient': bob.address})
+    # Create the new state updates which we plan to commit
+    state_bob_ownership = State(ownership_predicate, {'recipient': bob.address})
+    state_alice_ownership = State(ownership_predicate, {'recipient': alice.address})
+    # Create the commitment objects based on the states which will be included in plasma blocks
+    commit2_alice_to_bob = Commitment(state_bob_ownership, commit0_alice_deposit.start, commit0_alice_deposit.end, 0)
+    commit3_bob_to_alice = Commitment(state_alice_ownership, commit1_bob_deposit.start, commit1_bob_deposit.end, 0)
+    # Add the commitments
+    erc20_plasma_ct.commitment_chain.commit_block(operator.address, {erc20_plasma_ct.address: [commit2_alice_to_bob, commit3_bob_to_alice]})
+    # Assert inclusion of our commitments
+    assert erc20_plasma_ct.commitment_chain.validate_commitment(commit2_alice_to_bob, erc20_plasma_ct.address, None)
+    assert erc20_plasma_ct.commitment_chain.validate_commitment(commit3_bob_to_alice, erc20_plasma_ct.address, None)

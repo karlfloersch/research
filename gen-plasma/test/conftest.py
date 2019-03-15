@@ -1,7 +1,8 @@
 import pytest
 from utils import ERC20, User, Eth
 from erc20_plasma_contract import Erc20PlasmaContract
-from predicates.transfer import TransferPredicate
+from predicates.ownership import OwnershipPredicate
+from commitment_chain_contract import CommitmentChainContract
 
 @pytest.fixture
 def alice():
@@ -28,10 +29,15 @@ def eth():
     return Eth(0)
 
 @pytest.fixture
-def erc20_plasma_ct(eth, erc20_ct):
-    eth = Eth(0)
-    return Erc20PlasmaContract(eth, 'erc20_plasma_ct', erc20_ct)
+def operator():
+    return User('Operator')
 
 @pytest.fixture
-def transfer_predicate(erc20_plasma_ct):
-    return TransferPredicate(erc20_plasma_ct)
+def erc20_plasma_ct(eth, operator, erc20_ct):
+    eth = Eth(0)
+    commitment_chain_contract = CommitmentChainContract(operator.address)
+    return Erc20PlasmaContract(eth, 'erc20_plasma_ct', erc20_ct, commitment_chain_contract, 10)
+
+@pytest.fixture
+def ownership_predicate(erc20_plasma_ct):
+    return OwnershipPredicate(erc20_plasma_ct)

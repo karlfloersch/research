@@ -36,18 +36,29 @@ class ERC20:
         return True
 
 class State:
-    def __init__(self, coin_id, plasma_block_number, new_predicate, parameters):
+    def __init__(self, predicate, parameters):
+        self.predicate = predicate
         for key in parameters:
             setattr(self, key, parameters[key])
-        self.coin_id = coin_id
-        self.new_predicate = new_predicate
-        self.plasma_block_number = plasma_block_number
 
-class Claim:
-    def __init__(self, eth_block_number, state):
+class Commitment:
+    def __init__(self, state, start, end, block_number):
         assert isinstance(state, State)
         self.state = state
-        self.start_block_number = eth_block_number
+        self.start = start
+        self.end = end
+        self.block_number = block_number
+
+class Claim:
+    def __init__(self, commitment, eth_block_redeemable, num_challenges):
+        self.commitment = commitment
+        self.eth_block_redeemable = eth_block_redeemable
+        self.num_challenges = num_challenges
+
+class Challenge:
+    def __init__(self, earlier_claim, later_claim):
+        self.earlier_claim
+        self.later_claim
 
 class ClaimQueue:
     def __init__(self, initial_claim):
