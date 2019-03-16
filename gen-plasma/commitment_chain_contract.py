@@ -18,7 +18,7 @@ class CommitmentChainContract:
 
     def validate_commitment(self, commitment, subject, committment_witness):
         # Note that we are not providing merkle proofs and are instead faking it by storing the full blocks.
-        block = self.blocks[commitment.block_number]
+        block = self.blocks[commitment.plasma_block_number]
         # Make sure the subject contract address is in fact included in the block.
         # NOTE: We are mocking the inclusion & so we don't actually use the commitment witness.
         assert subject in block

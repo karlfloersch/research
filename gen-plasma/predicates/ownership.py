@@ -1,5 +1,6 @@
 class OwnershipRevocationWitness:
-    def __init__(self, signature, inclusion_witness):
+    def __init__(self, next_state_commitment, signature, inclusion_witness):
+        self.next_state_commitment = next_state_commitment
         self.signature = signature
         self.inclusion_witness = inclusion_witness
 
@@ -13,16 +14,19 @@ class OwnershipPredicate:
         # Anyone can submit a claim
         return True
 
-    # def canRevoke(self, tx_origin, stateID, committment, revocationWitness):
-    def dispute_claim(self, tx_origin, old_state, transition_witness, new_state):
-        # Check these are spends of the same coin
-        assert old_state.coin_id == new_state.coin_id
+    def can_revoke(self, state_id, commitment, revocation_witness):
+        # Check the state_id is in the commitment
+        assert commitment.start <= state_id and commitment.end > state_id
+        # Check the state_id is in the revocation_witness commitment
+        assert revocation_witness.next_state_commitment.start <= state_id and revocation_witness.next_state_commitment.end > state_id
         # Check inclusion proof
-        assert self.parent.validate_inclusion(new_state, transition_witness.inclusion_witness)
-        # Check that the signature is valid
-        assert old_state.recipient == transition_witness.signature
+        assert self.parent.commitment_chain.validate_commitment(revocation_witness.next_state_commitment,
+                                                                self.parent.address,
+                                                                revocation_witness.inclusion_witness)
+        # Check that the previous owner signed off on the change
+        assert commitment.state.recipient == revocation_witness.signature
         # Check that the spend is after the claim state
-        assert old_state.plasma_block_number < new_state.plasma_block_number
+        assert commitment.plasma_block_number < revocation_witness.next_state_commitment.plasma_block_number
         return True
 
     def resolve_claim(self, tx_origin, claim, call_data=None):
@@ -30,3 +34,6 @@ class OwnershipPredicate:
         assert tx_origin == claim.state.recipient
         # Transfer funds to the recipient
         self.parent.erc20_contract.transferFrom(self, claim.state.recipient, self.parent.deposits[claim.state.coin_id].value)
+
+    def get_additional_lockup(self, state):
+        return 0

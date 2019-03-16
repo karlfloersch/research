@@ -1,12 +1,4 @@
-# from utils import State, Claim
-from utils import State
-
-class Erc20Deposit:
-    def __init__(self, state, start, end, preceding_plasma_block_number):
-        self.state = state
-        self.start = start
-        self.end = end
-        self.preceding_plasma_block_number = preceding_plasma_block_number
+from utils import State, Claim, Commitment
 
 class ClaimableRange:
     def __init__(self, start, is_set):
@@ -38,7 +30,7 @@ class Erc20PlasmaContract:
         # Create the initial state which we will record to in this deposit
         initial_state = State(predicate, parameters)
         # Create the depoisit object
-        deposit = Erc20Deposit(initial_state, deposit_start, deposit_end, preceding_plasma_block_number)
+        deposit = Commitment(initial_state, deposit_start, deposit_end, preceding_plasma_block_number)
         # And store the deposit in our mapping of ranges which can be claimed
         self.claimable_ranges[deposit_end] = deposit
         # Increment total deposits
@@ -46,30 +38,30 @@ class Erc20PlasmaContract:
         # Return deposit record
         return deposit
 
-    # def validate_inclusion(self, state, inclusion_witness):
-    #     # Check inclusion. Note we don't use an inclusion proof because our commitments include all data. Note this would often be a merkle proof
-    #     assert state.plasma_block_number == inclusion_witness
-    #     assert state in self.commitments[inclusion_witness]
-    #     # Check that the state was added after the deposit of that coin
-    #     assert self.deposits[state.coin_id] and self.deposits[state.coin_id].plasma_block_number < state.plasma_block_number
-    #     return True
+    def _construct_claim(self, commitment):
+        additional_lockup_duration = commitment.state.predicate.get_additional_lockup(commitment.state)
+        eth_block_redeemable = self.eth.block_number + self.DISPUTE_PERIOD + additional_lockup_duration
+        return Claim(commitment, eth_block_redeemable, 0)
 
-    # def validate_deposit(self, state):
-    #     # Check that the deposit was recorded
-    #     assert state == self.deposits[state.coin_id]
-    #     return True
+    def claim_deposit(self, deposit_end):
+        deposit = self.claimable_ranges[deposit_end]
+        claim = self._construct_claim(deposit)
+        self.claims.append(claim)
+        return len(self.claims) - 1
 
-    # # TODO: Break this out into two functions, `claimCommittment` and `claimDeposit`
-    # def submit_claim(self, state, inclusion_witness=None, child_claimability_witness=None):
-    #     # Make sure we submitted either a committed or deposited state for this claim
-    #     assert self.validate_inclusion(state, inclusion_witness) if inclusion_witness is not None else self.validate_deposit(state)
-    #     # Create a claim for the state
-    #     claim = Claim(self.eth.block_number, state)
-    #     # Check that the child `can_claim` function returns true
-    #     assert claim.state.predicate.can_claim(claim, child_claimability_witness)
-    #     # Create a new claim
-    #     self.claims.append(claim)
-    #     return claim
+    def claim_commitment(self, commitment, commitment_witness, claimability_witness):
+        assert self.commitment_chain.validate_commitment(commitment, self.address, commitment_witness)
+        assert commitment.state.predicate.can_claim(commitment, commitment_witness)
+        claim = self._construct_claim(commitment)
+        self.claims.append(claim)
+        return len(self.claims) - 1
+
+    def revoke_claim(self, state_id, claim_id, revocation_witness):
+        claim = self.claims[claim_id]
+        # Call can revoke to check if the predicate allows this revocation attempt
+        assert claim.commitment.state.predicate.can_revoke(state_id, claim.commitment, revocation_witness)
+        # Delete the claim
+        del self.claims[claim_id]
 
     # def dispute_claim(self, tx_origin, claim, transition_witness, new_state):
     #     # Call the settlement contract's `dispute_claim` function to ensure the claim should be deleted

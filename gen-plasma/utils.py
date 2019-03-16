@@ -42,12 +42,12 @@ class State:
             setattr(self, key, parameters[key])
 
 class Commitment:
-    def __init__(self, state, start, end, block_number):
+    def __init__(self, state, start, end, plasma_block_number):
         assert isinstance(state, State)
         self.state = state
         self.start = start
         self.end = end
-        self.block_number = block_number
+        self.plasma_block_number = plasma_block_number
 
 class Claim:
     def __init__(self, commitment, eth_block_redeemable, num_challenges):
