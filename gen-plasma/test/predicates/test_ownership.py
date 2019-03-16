@@ -37,6 +37,30 @@ def test_revoke_claim_on_deposit(alice, bob, operator, erc20_plasma_ct, ownershi
     # Check the claim was deleted
     assert len(erc20_plasma_ct.claims) == 0
 
+
+def test_challenge_claim_with_invalid_state(alice, mallory, operator, erc20_plasma_ct, ownership_predicate):
+    # Deposit and commit to invalid state
+    commit0_alice_deposit = erc20_plasma_ct.deposit(alice.address, 100, ownership_predicate, {'recipient': alice.address})  # Add deposit
+    state_mallory_ownership = State(ownership_predicate, {'recipient': mallory.address})
+    invalid_commit1_alice_to_mallory = Commitment(state_mallory_ownership, commit0_alice_deposit.start, commit0_alice_deposit.end, 0)  # Create commitment
+    # Add the commitment
+    erc20_plasma_ct.commitment_chain.commit_block(operator.address, {erc20_plasma_ct.address: [invalid_commit1_alice_to_mallory]})
+    # Submit a claim for the invalid state
+    commitment_claim_id = erc20_plasma_ct.claim_commitment(invalid_commit1_alice_to_mallory, None, mallory.address)
+
+    revocation_witness0_alice_to_bob = OwnershipRevocationWitness(commit1_alice_to_bob, alice.address, None)
+    # Try submitting claim on deposit
+    deposit_claim_id = erc20_plasma_ct.claim_deposit(100)
+    # Check the claim was recorded
+    assert len(erc20_plasma_ct.claims) == 1
+    # Now bob revokes the claim with the spend inside the revocation witness
+    erc20_plasma_ct.revoke_claim(10, deposit_claim_id, revocation_witness0_alice_to_bob)
+    # Check the claim was deleted
+    assert len(erc20_plasma_ct.claims) == 0
+
+
+
+
 # def test_invalid_tx_exit_queue_resolution(alice, mallory, erc20_plasma_ct, ownership_predicate, erc20_ct):
 #     # Deposit and commit to invalid state
 #     state0_alice_deposit = erc20_plasma_ct.deposit_ERC20(alice.address, 100, ownership_predicate, {'recipient': alice.address})  # Add deposit

@@ -51,7 +51,7 @@ class Erc20PlasmaContract:
 
     def claim_commitment(self, commitment, commitment_witness, claimability_witness):
         assert self.commitment_chain.validate_commitment(commitment, self.address, commitment_witness)
-        assert commitment.state.predicate.can_claim(commitment, commitment_witness)
+        assert commitment.state.predicate.can_claim(commitment, claimability_witness)
         claim = self._construct_claim(commitment)
         self.claims.append(claim)
         return len(self.claims) - 1

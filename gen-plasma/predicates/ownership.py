@@ -12,6 +12,7 @@ class OwnershipPredicate:
 
     def can_claim(self, claim, witness):
         # Anyone can submit a claim
+        assert claim.commitment.state.recipient == witness
         return True
 
     def can_revoke(self, state_id, commitment, revocation_witness):
