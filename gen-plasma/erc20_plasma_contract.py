@@ -101,25 +101,3 @@ class Erc20PlasmaContract:
         self.erc20_contract.approve(self.address, claim.commitment.state.predicate, claim.commitment.end - claim.commitment.start)
         # Finally redeem the claim
         claim.commitment.state.predicate.claim_redeemed(claim)
-
-    # def dispute_claim(self, tx_origin, claim, transition_witness, new_state):
-    #     # Call the settlement contract's `dispute_claim` function to ensure the claim should be deleted
-    #     assert claim.state.predicate.dispute_claim(tx_origin, claim.state, transition_witness, new_state)
-    #     # Delete the claim
-    #     claim_queue = self.claim_queues[claim.state.coin_id]
-    #     claim_queue.remove(claim)
-
-    # def resolve_claim(self, tx_origin, claim, call_data=None):
-    #     claim_queue = self.claim_queues[claim.state.coin_id]
-    #     # Get the claim which is earliest in our claim queue
-    #     recorded_claim = claim_queue.first()
-    #     # Check that we are attempting to exit the earliest claim
-    #     assert recorded_claim == claim
-    #     # Check that the dispute_duration has passed
-    #     assert self.eth.block_number >= claim.start_block_number + claim_queue.dispute_duration
-    #     # Close the claim queue
-    #     claim_queue.close()
-    #     # Send the funds to the claim's settlement contract
-    #     self.erc20_contract.transferFrom(self.address, claim.state.predicate, self.deposits[claim.state.coin_id].value)
-    #     # Call the settlement contract's `resolve_claim` function to ensure the claim should be resolved
-    #     claim.state.predicate.resolve_claim(tx_origin, claim, call_data)
