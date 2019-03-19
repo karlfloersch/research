@@ -50,15 +50,15 @@ class Commitment:
         self.plasma_block_number = plasma_block_number
 
 class Claim:
-    def __init__(self, commitment, eth_block_redeemable, num_challenges):
+    def __init__(self, commitment, eth_block_redeemable):
         self.commitment = commitment
         self.eth_block_redeemable = eth_block_redeemable
-        self.num_challenges = num_challenges
+        self.num_challenges = 0
 
 class Challenge:
     def __init__(self, earlier_claim, later_claim):
-        self.earlier_claim
-        self.later_claim
+        self.earlier_claim = earlier_claim
+        self.later_claim = later_claim
 
 class ClaimQueue:
     def __init__(self, initial_claim):

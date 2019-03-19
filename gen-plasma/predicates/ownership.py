@@ -10,9 +10,9 @@ class OwnershipPredicate:
     def __init__(self, parent_settlement_contract):
         self.parent = parent_settlement_contract
 
-    def can_claim(self, claim, witness):
+    def can_claim(self, commitment, witness):
         # Anyone can submit a claim
-        assert claim.commitment.state.recipient == witness
+        assert commitment.state.recipient == witness
         return True
 
     def can_revoke(self, state_id, commitment, revocation_witness):

@@ -16,7 +16,7 @@ def test_submit_claim_on_commitment(alice, bob, operator, erc20_plasma_ct, owner
     # Add the commit
     erc20_plasma_ct.commitment_chain.commit_block(operator.address, {erc20_plasma_ct.address: [commit1_alice_to_bob]})
     # Try submitting claim
-    erc20_plasma_ct.claim_commitment(commit1_alice_to_bob, None, None)
+    erc20_plasma_ct.claim_commitment(commit1_alice_to_bob, 'merkle proof', bob.address)
     # Check the claim was recorded
     assert len(erc20_plasma_ct.claims) == 1
 
@@ -27,7 +27,7 @@ def test_revoke_claim_on_deposit(alice, bob, operator, erc20_plasma_ct, ownershi
     commit1_alice_to_bob = Commitment(state_bob_ownership, commit0_alice_deposit.start, commit0_alice_deposit.end, 0)  # Create commitment
     # Add the commitment
     erc20_plasma_ct.commitment_chain.commit_block(operator.address, {erc20_plasma_ct.address: [commit1_alice_to_bob]})
-    revocation_witness0_alice_to_bob = OwnershipRevocationWitness(commit1_alice_to_bob, alice.address, None)
+    revocation_witness0_alice_to_bob = OwnershipRevocationWitness(commit1_alice_to_bob, alice.address, 'merkle proof')
     # Try submitting claim on deposit
     deposit_claim_id = erc20_plasma_ct.claim_deposit(100)
     # Check the claim was recorded
@@ -42,21 +42,33 @@ def test_challenge_claim_with_invalid_state(alice, mallory, operator, erc20_plas
     # Deposit and commit to invalid state
     commit0_alice_deposit = erc20_plasma_ct.deposit(alice.address, 100, ownership_predicate, {'recipient': alice.address})  # Add deposit
     state_mallory_ownership = State(ownership_predicate, {'recipient': mallory.address})
-    invalid_commit1_alice_to_mallory = Commitment(state_mallory_ownership, commit0_alice_deposit.start, commit0_alice_deposit.end, 0)  # Create commitment
+    invalid_commit1_alice_to_mallory = Commitment(state_mallory_ownership,
+                                                  commit0_alice_deposit.start,
+                                                  commit0_alice_deposit.end,
+                                                  0)  # Create commitment
     # Add the commitment
     erc20_plasma_ct.commitment_chain.commit_block(operator.address, {erc20_plasma_ct.address: [invalid_commit1_alice_to_mallory]})
     # Submit a claim for the invalid state
-    commitment_claim_id = erc20_plasma_ct.claim_commitment(invalid_commit1_alice_to_mallory, None, mallory.address)
+    commitment_claim_id = erc20_plasma_ct.claim_commitment(invalid_commit1_alice_to_mallory, 'merkle proof', mallory.address)
+    # Oh no! Alice notices bad behavior and attempts withdrawal of deposit state
+    deposit_claim_id = erc20_plasma_ct.claim_deposit(commit0_alice_deposit.end)
+    # Alice isn't letting that other claim go through. She challenges it with her deposit!
+    challenge = erc20_plasma_ct.challenge_claim(deposit_claim_id, commitment_claim_id)
+    # Verify that the challenge was recorded
+    assert challenge is not None and len(erc20_plasma_ct.challenges) == 1
 
-    revocation_witness0_alice_to_bob = OwnershipRevocationWitness(commit1_alice_to_bob, alice.address, None)
-    # Try submitting claim on deposit
-    deposit_claim_id = erc20_plasma_ct.claim_deposit(100)
-    # Check the claim was recorded
-    assert len(erc20_plasma_ct.claims) == 1
-    # Now bob revokes the claim with the spend inside the revocation witness
-    erc20_plasma_ct.revoke_claim(10, deposit_claim_id, revocation_witness0_alice_to_bob)
-    # Check the claim was deleted
-    assert len(erc20_plasma_ct.claims) == 0
+
+
+
+    # revocation_witness0_alice_to_bob = OwnershipRevocationWitness(commit1_alice_to_bob, alice.address, 'merkle proof')
+    # # Try submitting claim on deposit
+    # deposit_claim_id = erc20_plasma_ct.claim_deposit(100)
+    # # Check the claim was recorded
+    # assert len(erc20_plasma_ct.claims) == 1
+    # # Now bob revokes the claim with the spend inside the revocation witness
+    # erc20_plasma_ct.revoke_claim(10, deposit_claim_id, revocation_witness0_alice_to_bob)
+    # # Check the claim was deleted
+    # assert len(erc20_plasma_ct.claims) == 0
 
 
 

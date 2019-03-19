@@ -1,4 +1,4 @@
-from utils import State, Claim, Commitment
+from utils import State, Claim, Commitment, Challenge
 
 class ClaimableRange:
     def __init__(self, start, is_set):
@@ -41,7 +41,7 @@ class Erc20PlasmaContract:
     def _construct_claim(self, commitment):
         additional_lockup_duration = commitment.state.predicate.get_additional_lockup(commitment.state)
         eth_block_redeemable = self.eth.block_number + self.DISPUTE_PERIOD + additional_lockup_duration
-        return Claim(commitment, eth_block_redeemable, 0)
+        return Claim(commitment, eth_block_redeemable)
 
     def claim_deposit(self, deposit_end):
         deposit = self.claimable_ranges[deposit_end]
@@ -62,6 +62,26 @@ class Erc20PlasmaContract:
         assert claim.commitment.state.predicate.can_revoke(state_id, claim.commitment, revocation_witness)
         # Delete the claim
         del self.claims[claim_id]
+
+    def challenge_claim(self, earlier_claim_id, later_claim_id):
+        earlier_claim = self.claims[earlier_claim_id]
+        later_claim = self.claims[later_claim_id]
+        # Make sure they overlap
+        assert earlier_claim.commitment.start <= later_claim.commitment.end
+        assert later_claim.commitment.start <= earlier_claim.commitment.end
+        # Validate that the earlier claim is in fact earlier
+        assert earlier_claim.commitment.plasma_block_number < later_claim.commitment.plasma_block_number
+        # Make sure the later claim isn't already redeemable
+        assert self.eth.block_number < later_claim.eth_block_redeemable
+        # Create and record our new challenge
+        new_challenge = Challenge(earlier_claim, later_claim)
+        self.challenges.append(new_challenge)
+        later_claim.num_challenges += 1
+        # If the `eth_block_redeemable` of the earlier claim is longer than later claim, extend the later claim dispute period
+        if later_claim.eth_block_redeemable < earlier_claim.eth_block_redeemable:
+            later_claim.eth_block_redeemable = earlier_claim.eth_block_redeemable
+        # Return our new challenge object
+        return new_challenge
 
     # def dispute_claim(self, tx_origin, claim, transition_witness, new_state):
     #     # Call the settlement contract's `dispute_claim` function to ensure the claim should be deleted
