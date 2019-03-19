@@ -27,6 +27,11 @@ class ERC20:
     def balanceOf(self, token_holder):
         return self.balances[token_holder]
 
+    def approve(self, sender, recipient, amount):
+        # Because everyone is honest, approve just transfers the funds for now...
+        self.transferFrom(sender, recipient, amount)
+        return True
+
     def transferFrom(self, sender, recipient, tokens):
         assert self.balances[sender] >= tokens
         self.balances[sender] -= tokens

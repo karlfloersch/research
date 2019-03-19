@@ -83,6 +83,25 @@ class Erc20PlasmaContract:
         # Return our new challenge object
         return new_challenge
 
+    def redeem_claim(self, claim_id, claimable_range_end):
+        claim = self.claims[claim_id]
+        # Check the claim's eth_block_redeemable has passed
+        assert claim.eth_block_redeemable <= self.eth.block_number
+        # Make sure that the claimable_range_end is actually in claimable_ranges
+        assert claimable_range_end in self.claimable_ranges
+        # Make sure the claim is within the claimable range
+        assert claim.commitment.start >= self.claimable_ranges[claimable_range_end]
+        assert claim.commitment.end <= claimable_range_end
+        # Update claimable range
+        if claim.commitment.start != self.claimable_ranges[claimable_range_end]:
+            self.claimable_ranges[claim.commitment.start] = self.claimable_ranges[claimable_range_end]
+        if claim.commitment.end != claimable_range_end:
+            self.claimable_ranges[claimable_range_end] = claim.commitment.end
+        # Approve coins for spending in predicate
+        self.erc20_contract.approve(self.address, claim.commitment.state.predicate, claim.commitment.end - claim.commitment.start)
+        # Finally redeem the claim
+        claim.commitment.state.predicate.claim_redeemed(claim)
+
     # def dispute_claim(self, tx_origin, claim, transition_witness, new_state):
     #     # Call the settlement contract's `dispute_claim` function to ensure the claim should be deleted
     #     assert claim.state.predicate.dispute_claim(tx_origin, claim.state, transition_witness, new_state)

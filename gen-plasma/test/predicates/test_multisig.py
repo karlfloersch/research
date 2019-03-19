@@ -6,7 +6,7 @@ from predicates.multisig import MultiSigTransitionWitness, MultiSigPredicate
 def multisig_predicate(erc20_plasma_ct):
     return MultiSigPredicate(erc20_plasma_ct)
 
-def test_submit_claim_on_deposit(alice, bob, charlie, erc20_plasma_ct, multisig_predicate):
+def skip_test_submit_claim_on_deposit(alice, bob, charlie, erc20_plasma_ct, multisig_predicate):
     state0_alice_and_bob_deposit = erc20_plasma_ct.deposit_ERC20(alice.address,
                                                                  100,
                                                                  multisig_predicate,
@@ -16,7 +16,7 @@ def test_submit_claim_on_deposit(alice, bob, charlie, erc20_plasma_ct, multisig_
     # Check the claim was recorded
     assert len(erc20_plasma_ct.claim_queues) == 1
 
-def test_submit_claim_on_transaction(alice, bob, charlie, erc20_plasma_ct, multisig_predicate):
+def skip_test_submit_claim_on_transaction(alice, bob, charlie, erc20_plasma_ct, multisig_predicate):
     # Deposit and send a tx
     state0_alice_and_bob_deposit = erc20_plasma_ct.deposit_ERC20(alice.address,
                                                                  100,
@@ -32,7 +32,7 @@ def test_submit_claim_on_transaction(alice, bob, charlie, erc20_plasma_ct, multi
     # Check the claim was recorded
     assert len(erc20_plasma_ct.claim_queues) == 1
 
-def test_submit_dispute_on_deposit(alice, bob, charlie, erc20_plasma_ct, multisig_predicate):
+def skip_test_submit_dispute_on_deposit(alice, bob, charlie, erc20_plasma_ct, multisig_predicate):
     # Deposit and send a tx
     state0_alice_and_bob_deposit = erc20_plasma_ct.deposit_ERC20(alice.address,
                                                                  100,
@@ -54,7 +54,7 @@ def test_submit_dispute_on_deposit(alice, bob, charlie, erc20_plasma_ct, multisi
     # Check the claim was deleted
     assert len(erc20_plasma_ct.claim_queues[state1_alice_and_bob.coin_id]) == 0
 
-def test_invalid_tx_exit_queue_resolution(alice, bob, mallory, erc20_plasma_ct, multisig_predicate, erc20_ct):
+def skip_test_invalid_tx_exit_queue_resolution(alice, bob, mallory, erc20_plasma_ct, multisig_predicate, erc20_ct):
     # Deposit and commit to an invalid state
     state0_alice_and_bob_deposit = erc20_plasma_ct.deposit_ERC20(alice.address,
                                                                  100,

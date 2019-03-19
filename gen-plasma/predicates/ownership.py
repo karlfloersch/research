@@ -30,11 +30,9 @@ class OwnershipPredicate:
         assert commitment.plasma_block_number < revocation_witness.next_state_commitment.plasma_block_number
         return True
 
-    def resolve_claim(self, tx_origin, claim, call_data=None):
-        # Check that the resolution is called by the recipient
-        assert tx_origin == claim.state.recipient
+    def claim_redeemed(self, claim, call_data=None):
         # Transfer funds to the recipient
-        self.parent.erc20_contract.transferFrom(self, claim.state.recipient, self.parent.deposits[claim.state.coin_id].value)
+        self.parent.erc20_contract.transferFrom(self, claim.commitment.state.recipient, claim.commitment.end - claim.commitment.start)
 
     def get_additional_lockup(self, state):
         return 0
