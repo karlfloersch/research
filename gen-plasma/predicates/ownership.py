@@ -12,7 +12,7 @@ class OwnershipPredicate:
 
     def can_claim(self, commitment, witness):
         # Anyone can submit a claim
-        assert commitment.state.recipient == witness
+        assert commitment.state.owner == witness
         return True
 
     def can_revoke(self, state_id, commitment, revocation_witness):
@@ -25,14 +25,14 @@ class OwnershipPredicate:
                                                                 self.parent.address,
                                                                 revocation_witness.inclusion_witness)
         # Check that the previous owner signed off on the change
-        assert commitment.state.recipient == revocation_witness.signature
+        assert commitment.state.owner == revocation_witness.signature
         # Check that the spend is after the claim state
         assert commitment.plasma_block_number < revocation_witness.next_state_commitment.plasma_block_number
         return True
 
     def claim_redeemed(self, claim, call_data=None):
-        # Transfer funds to the recipient
-        self.parent.erc20_contract.transferFrom(self, claim.commitment.state.recipient, claim.commitment.end - claim.commitment.start)
+        # Transfer funds to the owner
+        self.parent.erc20_contract.transferFrom(self, claim.commitment.state.owner, claim.commitment.end - claim.commitment.start)
 
     def get_additional_lockup(self, state):
         return 0

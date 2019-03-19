@@ -2,7 +2,7 @@ from utils import State, Commitment
 from predicates.ownership import OwnershipRevocationWitness
 
 def test_submit_claim_on_deposit(alice, erc20_plasma_ct, ownership_predicate):
-    commit0_alice_deposit = erc20_plasma_ct.deposit(alice.address, 100, ownership_predicate, {'recipient': alice.address})
+    commit0_alice_deposit = erc20_plasma_ct.deposit(alice.address, 100, ownership_predicate, {'owner': alice.address})
     # Try submitting claim
     erc20_plasma_ct.claim_deposit(commit0_alice_deposit.end)
     # Check the claim was recorded
@@ -10,8 +10,8 @@ def test_submit_claim_on_deposit(alice, erc20_plasma_ct, ownership_predicate):
 
 def test_submit_claim_on_commitment(alice, bob, operator, erc20_plasma_ct, ownership_predicate):
     # Deposit and send a tx
-    commit0_alice_deposit = erc20_plasma_ct.deposit(alice.address, 100, ownership_predicate, {'recipient': alice.address})  # Add deposit
-    state_bob_ownership = State(ownership_predicate, {'recipient': bob.address})
+    commit0_alice_deposit = erc20_plasma_ct.deposit(alice.address, 100, ownership_predicate, {'owner': alice.address})  # Add deposit
+    state_bob_ownership = State(ownership_predicate, {'owner': bob.address})
     commit1_alice_to_bob = Commitment(state_bob_ownership, commit0_alice_deposit.start, commit0_alice_deposit.end, 0)  # Create commitment
     # Add the commit
     erc20_plasma_ct.commitment_chain.commit_block(operator.address, {erc20_plasma_ct.address: [commit1_alice_to_bob]})
@@ -28,8 +28,8 @@ def test_submit_claim_on_commitment(alice, bob, operator, erc20_plasma_ct, owner
 
 def test_revoke_claim_on_deposit(alice, bob, operator, erc20_plasma_ct, ownership_predicate):
     # Deposit and send a tx
-    commit0_alice_deposit = erc20_plasma_ct.deposit(alice.address, 100, ownership_predicate, {'recipient': alice.address})  # Add deposit
-    state_bob_ownership = State(ownership_predicate, {'recipient': bob.address})
+    commit0_alice_deposit = erc20_plasma_ct.deposit(alice.address, 100, ownership_predicate, {'owner': alice.address})  # Add deposit
+    state_bob_ownership = State(ownership_predicate, {'owner': bob.address})
     commit1_alice_to_bob = Commitment(state_bob_ownership, commit0_alice_deposit.start, commit0_alice_deposit.end, 0)  # Create commitment
     # Add the commitment
     erc20_plasma_ct.commitment_chain.commit_block(operator.address, {erc20_plasma_ct.address: [commit1_alice_to_bob]})
@@ -46,11 +46,11 @@ def test_revoke_claim_on_deposit(alice, bob, operator, erc20_plasma_ct, ownershi
 
 def test_challenge_claim_with_invalid_state(alice, mallory, operator, erc20_plasma_ct, ownership_predicate):
     # Deposit and commit to invalid state
-    commit0_alice_deposit = erc20_plasma_ct.deposit(alice.address, 100, ownership_predicate, {'recipient': alice.address})  # Add deposit
+    commit0_alice_deposit = erc20_plasma_ct.deposit(alice.address, 100, ownership_predicate, {'owner': alice.address})  # Add deposit
     # Check that alice's balance was reduced
     assert erc20_plasma_ct.erc20_contract.balanceOf(alice.address) == 900
     # Uh oh! Malory creates an invalid state & commits it!!!
-    state_mallory_ownership = State(ownership_predicate, {'recipient': mallory.address})
+    state_mallory_ownership = State(ownership_predicate, {'owner': mallory.address})
     invalid_commit1_alice_to_mallory = Commitment(state_mallory_ownership,
                                                   commit0_alice_deposit.start,
                                                   commit0_alice_deposit.end,
