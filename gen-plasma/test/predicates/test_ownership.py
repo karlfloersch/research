@@ -40,9 +40,8 @@ def test_revoke_claim_on_deposit(alice, bob, operator, erc20_plasma_ct, ownershi
     assert len(erc20_plasma_ct.claims) == 1
     # Now bob revokes the claim with the spend inside the revocation witness
     erc20_plasma_ct.revoke_claim(10, deposit_claim_id, revocation_witness0_alice_to_bob)
-    # Check the claim was deleted
-    assert len(erc20_plasma_ct.claims) == 0
-
+    # Check the claim was revoked
+    assert erc20_plasma_ct.claims[deposit_claim_id].is_revoked
 
 def test_challenge_claim_with_invalid_state(alice, mallory, operator, erc20_plasma_ct, ownership_predicate):
     # Deposit and commit to invalid state
@@ -78,3 +77,28 @@ def test_challenge_claim_with_invalid_state(alice, mallory, operator, erc20_plas
     erc20_plasma_ct.redeem_claim(deposit_claim_id, erc20_plasma_ct.claims[deposit_claim_id].commitment.end)
     # Check that alice was sent her money!
     assert erc20_plasma_ct.erc20_contract.balanceOf(alice.address) == 1000
+
+def test_redeem_challenged_claim(alice, mallory, operator, erc20_plasma_ct, ownership_predicate):
+    # Deposit and then submit an invalid challenge
+    commit0_mallory_deposit = erc20_plasma_ct.deposit(mallory.address, 100, ownership_predicate, {'owner': mallory.address})  # Add deposit
+    # Create a new state & commitment for alice ownership
+    state_alice_ownership = State(ownership_predicate, {'owner': alice.address})
+    commit1_mallory_to_alice = Commitment(state_alice_ownership, commit0_mallory_deposit.start, commit0_mallory_deposit.end, 0)  # Create commitment
+    # Add the commit
+    erc20_plasma_ct.commitment_chain.commit_block(operator.address, {erc20_plasma_ct.address: [commit1_mallory_to_alice]})
+    # Now alice wants to withdraw, so submit a new claim on the funds
+    claim_id = erc20_plasma_ct.claim_commitment(commit1_mallory_to_alice, 'merkle proof', alice.address)
+    # Uh oh! Mallory decides to withdraw and challenge the claim
+    revoked_claim_id = erc20_plasma_ct.claim_deposit(commit0_mallory_deposit.end)
+    challenge_id = erc20_plasma_ct.challenge_claim(revoked_claim_id, claim_id)
+    # This revoked claim is then swiftly canceled by alice
+    revocation_witness0_mallory_to_alice = OwnershipRevocationWitness(commit1_mallory_to_alice, mallory.address, 'merkle proof')
+    erc20_plasma_ct.revoke_claim(10, revoked_claim_id, revocation_witness0_mallory_to_alice)
+    # Remove the challenge for the revoked claim
+    erc20_plasma_ct.remove_challenge(challenge_id)
+    # Increment the eth block number
+    erc20_plasma_ct.eth.block_number = erc20_plasma_ct.claims[claim_id].eth_block_redeemable
+    # Now alice can withdraw!
+    erc20_plasma_ct.redeem_claim(claim_id, erc20_plasma_ct.claims[claim_id].commitment.end)
+    # Check that alice was sent her money!
+    assert erc20_plasma_ct.erc20_contract.balanceOf(alice.address) == 1100

@@ -61,7 +61,17 @@ class Erc20PlasmaContract:
         # Call can revoke to check if the predicate allows this revocation attempt
         assert claim.commitment.state.predicate.can_revoke(state_id, claim.commitment, revocation_witness)
         # Delete the claim
-        del self.claims[claim_id]
+        self.claims[claim_id].is_revoked = True
+
+    def remove_challenge(self, challenge_id):
+        challenge = self.challenges[challenge_id]
+        earlier_claim = self.claims[challenge.earlier_claim_id]
+        assert earlier_claim.is_revoked
+        # All checks have passed, we have an earlier claim that was revoked and the challenge is no longer valid.
+        # Decrement the challenge count on the later claim
+        self.claims[challenge.later_claim_id].num_challenges -= 1
+        # Delete the challenge
+        del self.challenges[challenge_id]
 
     def challenge_claim(self, earlier_claim_id, later_claim_id):
         earlier_claim = self.claims[earlier_claim_id]
@@ -74,19 +84,21 @@ class Erc20PlasmaContract:
         # Make sure the later claim isn't already redeemable
         assert self.eth.block_number < later_claim.eth_block_redeemable
         # Create and record our new challenge
-        new_challenge = Challenge(earlier_claim, later_claim)
+        new_challenge = Challenge(earlier_claim_id, later_claim_id)
         self.challenges.append(new_challenge)
         later_claim.num_challenges += 1
         # If the `eth_block_redeemable` of the earlier claim is longer than later claim, extend the later claim dispute period
         if later_claim.eth_block_redeemable < earlier_claim.eth_block_redeemable:
             later_claim.eth_block_redeemable = earlier_claim.eth_block_redeemable
         # Return our new challenge object
-        return new_challenge
+        return len(self.challenges) - 1
 
     def redeem_claim(self, claim_id, claimable_range_end):
         claim = self.claims[claim_id]
         # Check the claim's eth_block_redeemable has passed
         assert claim.eth_block_redeemable <= self.eth.block_number
+        # Check that there are no open challenges for the claim
+        assert claim.num_challenges == 0
         # Make sure that the claimable_range_end is actually in claimable_ranges
         assert claimable_range_end in self.claimable_ranges
         # Make sure the claim is within the claimable range

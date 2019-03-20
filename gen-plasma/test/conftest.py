@@ -21,8 +21,8 @@ def mallory():
     return User('mallory')
 
 @pytest.fixture
-def erc20_ct(alice, bob):
-    return ERC20({alice.address: 1000, bob.address: 1000})
+def erc20_ct(alice, bob, mallory):
+    return ERC20({alice.address: 1000, bob.address: 1000, mallory.address: 1000})
 
 @pytest.fixture
 def eth():

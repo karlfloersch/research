@@ -61,9 +61,10 @@ class Claim:
         self.num_challenges = 0
 
 class Challenge:
-    def __init__(self, earlier_claim, later_claim):
-        self.earlier_claim = earlier_claim
-        self.later_claim = later_claim
+    def __init__(self, earlier_claim_id, later_claim_id):
+        self.earlier_claim_id = earlier_claim_id
+        self.later_claim_id = later_claim_id
+        self.is_revoked = False
 
 class ClaimQueue:
     def __init__(self, initial_claim):
