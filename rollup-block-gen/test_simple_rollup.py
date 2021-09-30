@@ -1,5 +1,7 @@
 import copy
 import pickle
+from block_gen import Block, Event, gen_dummy_block
+from typing import List
 from simple_rollup import generate_rollup
 
 def test_generate_rollup():
@@ -7,16 +9,7 @@ def test_generate_rollup():
     expected_l2_chain: List[Block] = []
 
     for i in range(100):
-        events: List[Event] = [{ "data": "event 1 data" }, { "data": "event 2 data" }]
-        txs: List[Event] = [{ "data": "tx 1 data" }]
-        block: Block = {
-            "block_hash": 'blockhash' + str(i),
-            "base_fee": 'basefee' + str(i),
-            "block_number": i,
-            "timestamp": i,
-            "events": events,
-            "txs": txs
-        }
+        block = gen_dummy_block(i)
         expected_l2_chain.append(copy.deepcopy(block))
         l2_block_encoded = pickle.dumps(block)
         block["events"][0]["data"] = l2_block_encoded

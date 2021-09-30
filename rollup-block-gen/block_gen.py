@@ -13,3 +13,16 @@ class Block:
     timestamp: int
     events: List[Event]
     txs: List[Transaction]
+
+def gen_dummy_block(i: int) -> Block:
+    events: List[Event] = [{ "data": "event 1 data" }, { "data": "event 2 data" }]
+    txs: List[Event] = [{ "data": "tx 1 data" }]
+    block: Block = {
+        "block_hash": 'blockhash' + str(i),
+        "base_fee": 'basefee' + str(i),
+        "block_number": i,
+        "timestamp": i,
+        "events": events,
+        "txs": txs
+    }
+    return block
