@@ -1,50 +1,36 @@
 from typing import List
 
-class DepositFeed:
-    pass
 
+class L1Event:
+    data: str
 
-class UserDeposit:
-    is_eoa:       bool
-    l1_tx_origin:  str
-    target:      str
-    data:        bytes
+class L1Transaction:
+    data: str
 
-class SequencerBlock:
-    is_eoa:       bool
-    l1_tx_origin:  str
-    target:      str
-    data:        bytes
-
-class SequencerBatch:
-    is_eoa:       bool
-    l1_tx_origin:  str
-    target:      str
-    data:        bytes
-
-class EthereumBlock:
+class L1Block:
     block_hash: str
     base_fee: int
     block_number: int
     timestamp: int
-    user_deposits: UserDeposit
-    sequencer_batches: UserDeposit
+    events: List[L1Event]
+    txs: List[L1Transaction]
 
-mainnet_blockchain: List[EthereumBlock] = []
+l1_blockchain: List[L1Block] = []
 
 for i in range(100):
-    user_deposit: UserDeposit = {
-        "is_eoa": True,
-        "l1_tx_origin": "da tx origin",
-        "target": "da target",
-        "data": b"da data"
-    }
-    next_block: EthereumBlock = {
+    events: List[L1Event] = [{ "data": "event 1 data" }, { "data": "event 2 data" }]
+    txs: List[L1Event] = [{ "data": "tx 1 data" }]
+    next_block: L1Block = {
         "block_hash": 'blockhash' + str(i),
         "base_fee": 'basefee' + str(i),
         "block_number": i,
         "timestamp": i,
-        "user_deposits": [user_deposit]
+        "events": events,
+        "txs": txs
     }
-    mainnet_blockchain.append(next_block)
+    l1_blockchain.append(next_block)
+
+print("Created a mock blockchain.")
+
+print("Time to write a function which transforms each L1 block into some number of L2 blocks.")
 
