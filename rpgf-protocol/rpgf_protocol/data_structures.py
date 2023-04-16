@@ -15,9 +15,12 @@ class ImpactCertificate(Entity):
 class User(Entity):
     name: str
     metadata: str
+    citizenshipScore: int
+    citizenshipVotingFunction: Callable
+    rpgfVotingFunction: Callable
 
 class Collective(Entity):
-    citizens: List[Entity]
+    minimumCitizenScore: int
 
 class ImpactRelation:
     impactRecipient: Entity
@@ -45,6 +48,7 @@ class RPGFDistribution:
 class RPGFBallot:
     referendum: RPGFReferendum
     distribution: RPGFDistribution
+    citizen: User
 
 class CitizenshipReferendum(Referendum):
     # a referendum for selecting the next set of citizens
