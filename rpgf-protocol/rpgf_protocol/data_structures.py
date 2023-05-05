@@ -16,9 +16,9 @@ class User(Entity):
     name: str
     metadata: str
     citizenshipScore: int
-    citizenshipVotingFunction: Callable
-    rpgfVotingFunction: Callable
-    impactRelationAttestationFunction: Callable
+    citizenshipVotingFunction: Callable[[List["User"], List["ValueChainAttestations"], CitizenshipReferendum], CitizenshipBallot]
+    rpgfVotingFunction: Callable[[List["ValueChainAttestations"], RPGFReferendum], RPGFBallot]
+    impactRelationAttestationFunction: Callable[[List["ValueChainAttestations"]], None]
 
 class ImpactRelation:
     impactRecipient: Entity
@@ -34,6 +34,7 @@ class Referendum:
 
 class RPGFReferendum(Referendum):
     # A referendum for distributing retroactive public goods funding (RPGF) rewards
+    ballots: List["RPGFBallot"]
     countVotes: Callable[[List["RPGFBallot"]], "RPGFDistribution"]
 
 class RPGFDistributionItem(TypedDict):
@@ -50,6 +51,7 @@ class RPGFBallot:
 
 class CitizenshipReferendum(Referendum):
     # a referendum for selecting the next set of citizens
+    ballots: List["CitizenshipBallot"]
     countVotes: Callable[[List["CitizenshipBallot"]], "CitizenshipDistribution"]
 
 class CitizenshipDistributionItem(TypedDict):
@@ -58,6 +60,7 @@ class CitizenshipDistributionItem(TypedDict):
 
 class CitizenshipDistribution:
     list: List[CitizenshipDistributionItem]
+    getCitizenshipScore: Callable[[User], int]
 
 class CitizenshipBallot:
     distribution: CitizenshipDistribution
@@ -85,13 +88,51 @@ Notes:
 * This function should not define any business logic that we aren't really confident about, but instead rely on
 an assumption that all of the functions defined in the above data structures are defined.
 
-The file should contain the following logic and configuration:
-1. It should contain a init function which initializes the following information:
-  * A collective 
-  * A hydrateValueChain function which takes in as input a ValueChainAttestations object and a list of Users, and calls each User's impactRelationAttestationFunction passing in attestToImpactRelation
-  * A RPGFReferendum frequency and a CitizenshipReferendum frequency. This is defined in ticks (int)
-2. It should contain a "tick" function which takes in a parameter which represents time.
-3. Every tick it should call hydrateValueChain, and then every tick mod RPGFReferendum frequency call  and tick mod CitizenshipReferendum frequency
-3. If the tick mod the RPGF or citizenship frequencies, it should call a function `runRPGFReferendum` or `runCitizenshipReferendum` respectively.
-4. Running a referendum should 
+Here is some psudocode which roughly defines the function:
+
+run_rpgf.py
+==========
+
+# im did this as a class, idc if it's a class or a set of functions.
+class RPGFRunner
+    self.time = 1
+    def init(colllective: Collective, RPGFReferendumFrequency: int, citizenshipReferendumFrequency: int)->None
+        # store these as globals
+
+    def hydrateValueChain():
+        for user in self.collective.users:
+            user.impactRelationAttestationFunction(self.collective.ValueChainAttestations)
+    
+    def distributeTokens(tokenDistribution: RPGFDistribution):
+        pass
+    
+    
+    # TODO: Abstract these two "run round" functions into a single referrendum process. This is not super DRY!!
+    def runRPGFRound():
+        referendum = new RPGFReferendum()
+        for user in self.collective.users:
+            ballot = user.rpgfVotingFunction(self.collective.attestationLayer, referendum)
+            referendum.ballots.push(ballot)
+        self.collective.RPGFReferendums.push(referendum)
+        result = referendum.countVotes()
+        self.distributeTokens(result)
+
+    def runCitizenshipRound():
+        referendum = new CitizenshipReferendum()
+        for user in self.collective.users:
+            ballot = user.citizenshipVotingFunction(self.collective.users, self.collective.attestationLayer, referendum)
+            referendum.ballots.push(ballot)
+        self.collective.citizenshipReferendums.push(referendum)
+        result = referendum.countVotes()
+        # UPDATE user citizenship scores
+        for user in self.collective.users:
+            user.citizenshipScore = result.getCitizenshipScore(user)
+
+    def tick():
+        self.hydrateValueChain()
+        if self.time % self.RPGFReferendumFrequency == 0:
+            self.runRPGFRound()
+        if self.time % self.citizenshipReferendumFrequency == 0:
+            self.runCitizenshipRound()
+        self.time += 1
 '''
